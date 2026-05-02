@@ -6,27 +6,31 @@ const CARD_RATIO = 0.686;
 
 const DEFAULT_SETTINGS = {
   main: {
-    x: 4,
-    y: 8,
-    width: 72,
-    height: 68,
+    mode: "wrap",
+    x: 0.4,
+    y: 9,
+    width: 99.2,
+    height: 58,
     cols: 10,
-    rows: 4,
-    count: 40,
-    gapX: 0.8,
-    gapY: 1.2,
+    rows: 5,
+    maxCols: 10,
+    count: 41,
+    gapX: 0.55,
+    gapY: 0.85,
     ratio: CARD_RATIO,
   },
   extra: {
-    x: 4,
-    y: 78,
-    width: 72,
-    height: 17,
-    cols: 15,
-    rows: 1,
+    mode: "wrap",
+    x: 0.4,
+    y: 70.1,
+    width: 99.2,
+    height: 23,
+    cols: 10,
+    rows: 2,
+    maxCols: 10,
     count: 15,
-    gapX: 0.8,
-    gapY: 0,
+    gapX: 0.55,
+    gapY: 1.8,
     ratio: CARD_RATIO,
   },
 };
@@ -36,9 +40,10 @@ const CONTROL_DEFS = [
   ["y", "上位置 %", 0, 100, 0.1],
   ["width", "領域幅 %", 1, 100, 0.1],
   ["height", "領域高 %", 1, 100, 0.1],
-  ["cols", "列数", 1, 20, 1],
-  ["rows", "行数", 1, 8, 1],
-  ["count", "切り出し枚数", 1, 80, 1],
+  ["cols", "旧列数", 1, 20, 1],
+  ["rows", "旧行数", 1, 8, 1],
+  ["maxCols", "最大列数", 1, 10, 1],
+  ["count", "切り出し枚数", { main: 40, extra: 0 }, { main: 60, extra: 15 }, 1],
   ["gapX", "横間隔 %", 0, 10, 0.1],
   ["gapY", "縦間隔 %", 0, 10, 0.1],
   ["ratio", "カード幅/高さ", 0.5, 0.9, 0.001],
@@ -59,6 +64,7 @@ const els = {
   saveStatus: document.querySelector("#saveStatus"),
   imageInput: document.querySelector("#imageInput"),
   sourceCanvas: document.querySelector("#sourceCanvas"),
+  presetButton: document.querySelector("#presetButton"),
   previewButton: document.querySelector("#previewButton"),
   saveDeckButton: document.querySelector("#saveDeckButton"),
   clearDataButton: document.querySelector("#clearDataButton"),
@@ -139,8 +145,8 @@ function buildControls() {
       const input = document.createElement("input");
       input.id = id;
       input.type = "number";
-      input.min = String(min);
-      input.max = String(max);
+      input.min = String(getScopedControlValue(min, scope));
+      input.max = String(getScopedControlValue(max, scope));
       input.step = String(step);
       input.value = String(state.settings[scope][key]);
       input.dataset.scope = scope;
@@ -153,6 +159,10 @@ function buildControls() {
   }
 }
 
+function getScopedControlValue(value, scope) {
+  return typeof value === "object" ? value[scope] : value;
+}
+
 function handleSettingInput(event) {
   const input = event.currentTarget;
   const scope = input.dataset.scope;
@@ -163,8 +173,27 @@ function handleSettingInput(event) {
     return;
   }
 
-  state.settings[scope][key] = ["cols", "rows", "count"].includes(key) ? Math.round(value) : value;
+  const normalizedValue = ["cols", "rows", "maxCols", "count"].includes(key) ? Math.round(value) : value;
+  state.settings[scope][key] = clampSettingValue(scope, key, normalizedValue);
   drawSourcePreview();
+}
+
+function clampSettingValue(scope, key, value) {
+  const controlDef = CONTROL_DEFS.find(([controlKey]) => controlKey === key);
+  if (!controlDef) {
+    return value;
+  }
+
+  const min = getScopedControlValue(controlDef[2], scope);
+  const max = getScopedControlValue(controlDef[3], scope);
+  return Math.min(max, Math.max(min, value));
+}
+
+function applyOfficialPreset() {
+  state.settings = structuredClone(DEFAULT_SETTINGS);
+  buildControls();
+  drawSourcePreview();
+  setStatus("公式画像プリセット適用済み");
 }
 
 async function handleImageInput(event) {
@@ -255,6 +284,10 @@ function getRegionRect(settings, width, height, offsetX = 0, offsetY = 0) {
 }
 
 function getCells(settings, rect) {
+  if (settings.mode === "wrap") {
+    return getWrappedCells(settings, rect);
+  }
+
   const cols = Math.max(1, settings.cols);
   const rows = Math.max(1, settings.rows);
   const gapX = rect.width * (settings.gapX / 100);
@@ -277,6 +310,48 @@ function getCells(settings, rect) {
   }
 
   return cells.slice(0, settings.count);
+}
+
+function getWrappedCells(settings, rect) {
+  const maxCols = Math.max(1, settings.maxCols);
+  const rowCounts = buildRowCounts(settings.count, maxCols);
+  if (!rowCounts.length) {
+    return [];
+  }
+
+  const gapX = rect.width * (settings.gapX / 100);
+  const gapY = rect.height * (settings.gapY / 100);
+  const cellWidth = (rect.width - gapX * (maxCols - 1)) / maxCols;
+  const idealHeight = cellWidth / settings.ratio;
+  const maxHeight = (rect.height - gapY * (rowCounts.length - 1)) / rowCounts.length;
+  const cellHeight = Math.min(idealHeight, maxHeight);
+  const cells = [];
+
+  rowCounts.forEach((rowCount, row) => {
+    for (let col = 0; col < rowCount; col += 1) {
+      cells.push({
+        x: rect.x + col * (cellWidth + gapX),
+        y: rect.y + row * (cellHeight + gapY),
+        width: cellWidth,
+        height: cellHeight,
+      });
+    }
+  });
+
+  return cells;
+}
+
+function buildRowCounts(count, maxCols) {
+  const rowCounts = [];
+  let remaining = Math.max(0, count);
+
+  while (remaining > 0) {
+    const rowCount = Math.min(remaining, maxCols);
+    rowCounts.push(rowCount);
+    remaining -= rowCount;
+  }
+
+  return rowCounts;
 }
 
 async function previewSlices() {
@@ -363,9 +438,13 @@ async function saveDeck() {
     return;
   }
 
-  if (!state.mainCards.length || !state.extraCards.length) {
+  if (state.sourceImage) {
     await previewSlices();
+  } else if (state.settings.extra.count === 0 && state.extraCards.length) {
+    state.extraCards = [];
+    renderAllCards();
   }
+
   if (!state.mainCards.length) {
     setStatus("保存できるカードがありません");
     return;
@@ -490,7 +569,7 @@ async function loadSavedState() {
   ]);
 
   if (settings) {
-    state.settings = settings;
+    state.settings = normalizeSettings(settings);
     buildControls();
   }
 
@@ -607,6 +686,37 @@ async function init() {
   els.drawButton.addEventListener("click", drawHand);
   els.logForm.addEventListener("submit", saveLog);
   els.clearDataButton.addEventListener("click", clearAllData);
+  els.presetButton.addEventListener("click", applyOfficialPreset);
 }
 
 init();
+
+function normalizeSettings(settings) {
+  return {
+    main: normalizeScopeSettings("main", settings.main),
+    extra: normalizeScopeSettings("extra", settings.extra),
+  };
+}
+
+function normalizeScopeSettings(scope, settings) {
+  const fallback = structuredClone(DEFAULT_SETTINGS[scope]);
+  if (!settings) {
+    return fallback;
+  }
+
+  const normalized = {
+    ...fallback,
+    ...settings,
+  };
+
+  if (!Object.hasOwn(settings, "mode")) {
+    normalized.mode = "grid";
+  }
+  if (!Object.hasOwn(settings, "maxCols")) {
+    normalized.maxCols = settings.cols ?? fallback.maxCols;
+  }
+
+  normalized.count = clampSettingValue(scope, "count", normalized.count);
+  normalized.maxCols = clampSettingValue(scope, "maxCols", normalized.maxCols);
+  return normalized;
+}

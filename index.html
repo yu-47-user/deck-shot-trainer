@@ -43,6 +43,7 @@
             <h2 id="cropTitle">切り出し設定</h2>
           </div>
           <div class="actions">
+            <button id="presetButton" type="button">公式画像プリセット</button>
             <button id="previewButton" type="button">切り出しプレビュー</button>
             <button id="saveDeckButton" class="primary" type="button">カードを保存</button>
           </div>
@@ -51,7 +52,7 @@
         <div class="crop-layout">
           <div class="preview-stage">
             <canvas id="sourceCanvas" width="960" height="540" aria-label="アップロード画像プレビュー"></canvas>
-            <p class="hint">白枠がメイン、橙枠がEXです。位置・余白・間隔・比率は下の数値で調整します。</p>
+            <p class="hint">白枠がメイン、橙枠がEXです。公式画像プリセットは最大10列で折り返します。</p>
           </div>
 
           <div class="settings-grid">
