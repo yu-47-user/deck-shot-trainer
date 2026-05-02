@@ -298,7 +298,7 @@ textarea {
 .card-thumb img {
   width: 100%;
   aspect-ratio: 0.686 / 1;
-  border-radius: 8px;
+  border-radius: 0;
   object-fit: cover;
   background: #d5c7ac;
   box-shadow: 0 8px 18px rgba(45, 34, 20, 0.16);
