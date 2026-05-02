@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Deck Shot Trainer</title>
+    <link rel="stylesheet" href="./src/css/style.css">
+  </head>
+  <body>
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Browser-only deck practice</p>
+        <h1>Deck Shot Trainer</h1>
+        <p class="lead">デッキスクリーンショットからカード画像を切り出し、初手と展開ログをブラウザ内だけに保存します。</p>
+      </div>
+      <div class="hero-card">
+        <strong id="saveStatus">未保存</strong>
+        <span>画像・カード・ログはサーバーへ送信しません。</span>
+      </div>
+    </header>
+
+    <main class="app-shell">
+      <section class="panel span-2" aria-labelledby="uploadTitle">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Step 1</p>
+            <h2 id="uploadTitle">スクリーンショットを読み込む</h2>
+          </div>
+          <button id="clearDataButton" class="danger" type="button">ブラウザ内データ削除</button>
+        </div>
+        <label class="upload-box">
+          <input id="imageInput" type="file" accept="image/*">
+          <span>画像を選択</span>
+          <small>公式ツールのデッキ画面を想定。カード名認識やOCRは行いません。</small>
+        </label>
+      </section>
+
+      <section class="panel span-2" aria-labelledby="cropTitle">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Step 2</p>
+            <h2 id="cropTitle">切り出し設定</h2>
+          </div>
+          <div class="actions">
+            <button id="previewButton" type="button">切り出しプレビュー</button>
+            <button id="saveDeckButton" class="primary" type="button">カードを保存</button>
+          </div>
+        </div>
+
+        <div class="crop-layout">
+          <div class="preview-stage">
+            <canvas id="sourceCanvas" width="960" height="540" aria-label="アップロード画像プレビュー"></canvas>
+            <p class="hint">白枠がメイン、橙枠がEXです。位置・余白・間隔・比率は下の数値で調整します。</p>
+          </div>
+
+          <div class="settings-grid">
+            <fieldset>
+              <legend>メインデッキ</legend>
+              <div class="control-grid" data-scope="main"></div>
+            </fieldset>
+            <fieldset>
+              <legend>EXデッキ</legend>
+              <div class="control-grid" data-scope="extra"></div>
+            </fieldset>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="mainPreviewTitle">
+        <div class="section-head compact">
+          <div>
+            <p class="eyebrow">Main</p>
+            <h2 id="mainPreviewTitle">メイン切り出し</h2>
+          </div>
+          <span id="mainCount" class="badge">0枚</span>
+        </div>
+        <div id="mainCards" class="card-grid empty">画像を読み込んでプレビューしてください。</div>
+      </section>
+
+      <section class="panel" aria-labelledby="extraPreviewTitle">
+        <div class="section-head compact">
+          <div>
+            <p class="eyebrow">Extra</p>
+            <h2 id="extraPreviewTitle">EX参照</h2>
+          </div>
+          <span id="extraCount" class="badge">0枚</span>
+        </div>
+        <div id="extraCards" class="card-grid empty">保存済みEXカードがここに表示されます。</div>
+      </section>
+
+      <section class="panel span-2" aria-labelledby="practiceTitle">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Step 3</p>
+            <h2 id="practiceTitle">5枚ドローと展開ログ</h2>
+          </div>
+          <button id="drawButton" class="primary" type="button">メインから5枚ドロー</button>
+        </div>
+
+        <div class="practice-grid">
+          <div>
+            <h3>現在の初手</h3>
+            <div id="handCards" class="hand-grid empty">保存済みメインデッキからドローします。</div>
+          </div>
+          <form id="logForm" class="log-form">
+            <h3>展開ログ</h3>
+            <label>
+              結果
+              <select id="resultInput" required>
+                <option value="成功">成功</option>
+                <option value="途中まで">途中まで</option>
+                <option value="失敗">失敗</option>
+              </select>
+            </label>
+            <label>
+              課題タグ
+              <input id="tagsInput" type="text" placeholder="例: 誘発ケア, 初動不足">
+            </label>
+            <label>
+              メモ
+              <textarea id="memoInput" rows="5" placeholder="展開結果、失敗理由、妨害ケアなど"></textarea>
+            </label>
+            <button type="submit">ログを保存</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="panel span-2" aria-labelledby="logsTitle">
+        <div class="section-head compact">
+          <div>
+            <p class="eyebrow">History</p>
+            <h2 id="logsTitle">練習ログ一覧</h2>
+          </div>
+          <span id="logCount" class="badge">0件</span>
+        </div>
+        <div id="logList" class="log-list empty">まだログはありません。</div>
+      </section>
+    </main>
+
+    <script src="./src/js/script.js"></script>
+  </body>
+</html>
