@@ -380,6 +380,7 @@ async function previewSlices() {
 async function createCards(scope) {
   const rect = getRegionRect(state.settings[scope], state.sourceImage.width, state.sourceImage.height);
   const cells = getCells(state.settings[scope], rect);
+  const existingCards = new Map(state[`${scope}Cards`].map((card) => [card.id, card]));
   const cards = [];
 
   for (const [index, cell] of cells.entries()) {
@@ -404,12 +405,14 @@ async function createCards(scope) {
       slice.height,
     );
     const blob = await canvasToBlob(canvas);
+    const id = `${scope}-${String(index + 1).padStart(2, "0")}`;
     cards.push({
-      id: `${scope}-${String(index + 1).padStart(2, "0")}`,
+      id,
       scope,
       index: index + 1,
       blob,
       url: URL.createObjectURL(blob),
+      isStarter: Boolean(existingCards.get(id)?.isStarter),
     });
   }
 
@@ -474,6 +477,7 @@ async function saveDeck() {
       scope: card.scope,
       index: card.index,
       blob: card.blob,
+      isStarter: Boolean(card.isStarter),
       updatedAt: new Date().toISOString(),
     });
   }
@@ -492,13 +496,13 @@ async function saveDeck() {
 }
 
 function renderAllCards() {
-  renderCards(els.mainCards, state.mainCards, "メイン");
+  renderCards(els.mainCards, state.mainCards, "メイン", { canMarkStarter: true });
   renderCards(els.extraCards, state.extraCards, "EX");
   els.mainCount.textContent = `${state.mainCards.length}枚`;
   els.extraCount.textContent = `${state.extraCards.length}枚`;
 }
 
-function renderCards(container, cards, label) {
+function renderCards(container, cards, label, options = {}) {
   if (!cards.length) {
     container.className = "card-grid empty";
     container.textContent = `${label}カードはまだありません。`;
@@ -506,19 +510,72 @@ function renderCards(container, cards, label) {
   }
 
   container.className = "card-grid";
-  container.replaceChildren(...cards.map((card) => createCardElement(card, label)));
+  container.replaceChildren(...cards.map((card) => createCardElement(card, label, options)));
 }
 
-function createCardElement(card, label) {
+function createCardElement(card, label, options = {}) {
   const figure = document.createElement("figure");
   const image = document.createElement("img");
-  const caption = document.createElement("span");
   figure.className = "card-thumb";
+  if (card.isStarter) {
+    figure.classList.add("is-starter");
+  }
+
   image.src = card.url;
   image.alt = `${label} ${card.index}`;
-  caption.textContent = `${label} ${card.index}`;
-  figure.append(image, caption);
+  figure.append(image);
+
+  if (options.canMarkStarter) {
+    const starterButton = document.createElement("button");
+    starterButton.className = "starter-toggle";
+    starterButton.type = "button";
+    starterButton.textContent = "初動";
+    starterButton.setAttribute("aria-pressed", String(Boolean(card.isStarter)));
+    starterButton.setAttribute("aria-label", `${label} ${card.index}を初動カードとして${card.isStarter ? "解除" : "マーキング"}`);
+    starterButton.addEventListener("click", () => toggleStarterCard(card));
+    figure.append(starterButton);
+  } else if (card.isStarter) {
+    const starterBadge = document.createElement("span");
+    starterBadge.className = "starter-badge";
+    starterBadge.textContent = "初動";
+    figure.append(starterBadge);
+  }
+
   return figure;
+}
+
+async function toggleStarterCard(card) {
+  if (card.scope !== "main") {
+    return;
+  }
+
+  card.isStarter = !card.isStarter;
+  renderAllCards();
+  renderCurrentHand();
+
+  const persisted = await persistStarterFlag(card);
+  setStatus(persisted ? "初動カードを更新しました" : "カード保存時に初動マークを保持します");
+}
+
+async function persistStarterFlag(card) {
+  if (!state.db) {
+    return false;
+  }
+
+  const transaction = state.db.transaction("cards", "readwrite");
+  const store = transaction.objectStore("cards");
+  const savedCard = await requestToPromise(store.get(card.id));
+  if (!savedCard) {
+    return false;
+  }
+
+  store.put({
+    ...savedCard,
+    isStarter: Boolean(card.isStarter),
+    updatedAt: new Date().toISOString(),
+  });
+  await transactionComplete(transaction);
+  return true;
 }
 
 function drawHand() {
@@ -528,9 +585,17 @@ function drawHand() {
   }
 
   state.currentHand = shuffle([...state.mainCards]).slice(0, 5);
+  renderCurrentHand();
+  setStatus("5枚ドロー済み");
+}
+
+function renderCurrentHand() {
+  if (!state.currentHand.length) {
+    return;
+  }
+
   els.handCards.className = "hand-grid";
   els.handCards.replaceChildren(...state.currentHand.map((card) => createCardElement(card, "初手")));
-  setStatus("5枚ドロー済み");
 }
 
 function shuffle(items) {
@@ -608,6 +673,7 @@ function hydrateCards(cards) {
     .sort((a, b) => a.index - b.index)
     .map((card) => ({
       ...card,
+      isStarter: Boolean(card.isStarter),
       url: URL.createObjectURL(card.blob),
     }));
 }

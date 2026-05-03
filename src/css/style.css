@@ -307,8 +307,9 @@ textarea {
 }
 
 .card-thumb {
-  display: grid;
-  gap: 0.35rem;
+  position: relative;
+  display: block;
+  margin: 0;
 }
 
 .card-thumb img {
@@ -321,10 +322,42 @@ textarea {
   box-shadow: 0 8px 18px rgba(45, 34, 20, 0.16);
 }
 
-.card-thumb span {
-  color: var(--muted);
-  font-size: 0.78rem;
-  text-align: center;
+.card-thumb.is-starter img {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.starter-toggle,
+.starter-badge {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  min-height: 0;
+  border-radius: 999px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.starter-toggle {
+  color: rgba(29, 36, 32, 0.7);
+  background: rgba(255, 250, 240, 0.82);
+  box-shadow: 0 4px 12px rgba(45, 34, 20, 0.14);
+}
+
+.starter-toggle[aria-pressed="true"],
+.starter-badge {
+  color: white;
+  background: var(--accent);
+}
+
+.starter-toggle:hover {
+  transform: translateY(-1px);
+}
+
+.starter-badge {
+  pointer-events: none;
 }
 
 .empty {
