@@ -21,7 +21,7 @@
     </header>
 
     <main class="app-shell">
-      <section class="panel span-2" aria-labelledby="uploadTitle">
+      <section class="panel span-2 setup-panel" aria-labelledby="uploadTitle">
         <div class="section-head">
           <div>
             <p class="eyebrow">Step 1</p>
@@ -36,7 +36,7 @@
         </label>
       </section>
 
-      <section class="panel span-2" aria-labelledby="cropTitle">
+      <section class="panel span-2 crop-panel" aria-labelledby="cropTitle">
         <div class="section-head">
           <div>
             <p class="eyebrow">Step 2</p>
@@ -49,58 +49,39 @@
           </div>
         </div>
 
-        <div class="crop-layout">
-          <div class="preview-stage">
-            <canvas id="sourceCanvas" width="960" height="540" aria-label="アップロード画像プレビュー"></canvas>
-            <p class="hint">白枠がメイン、橙枠がEXです。ずれる場合だけ詳細設定を開いて調整します。</p>
-          </div>
+        <details class="crop-workspace">
+          <summary>画像プレビューと切り出し設定</summary>
+          <div class="crop-layout">
+            <div class="preview-stage">
+              <canvas id="sourceCanvas" width="960" height="540" aria-label="アップロード画像プレビュー"></canvas>
+              <p class="hint">白枠がメイン、橙枠がEXです。ずれる場合だけ詳細設定を開いて調整します。</p>
+            </div>
 
-          <div class="settings-grid">
-            <fieldset>
-              <legend>メインデッキ</legend>
-              <div class="control-grid" data-scope="main" data-control-group="primary"></div>
-            </fieldset>
-            <fieldset>
-              <legend>EXデッキ</legend>
-              <div class="control-grid" data-scope="extra" data-control-group="primary"></div>
-            </fieldset>
-            <details class="advanced-settings">
-              <summary>詳細設定</summary>
-              <div class="settings-grid">
-                <fieldset>
-                  <legend>メインデッキ</legend>
-                  <div class="control-grid" data-scope="main" data-control-group="advanced"></div>
-                </fieldset>
-                <fieldset>
-                  <legend>EXデッキ</legend>
-                  <div class="control-grid" data-scope="extra" data-control-group="advanced"></div>
-                </fieldset>
-              </div>
-            </details>
+            <div class="settings-grid">
+              <fieldset>
+                <legend>メインデッキ</legend>
+                <div class="control-grid" data-scope="main" data-control-group="primary"></div>
+              </fieldset>
+              <fieldset>
+                <legend>EXデッキ</legend>
+                <div class="control-grid" data-scope="extra" data-control-group="primary"></div>
+              </fieldset>
+              <details class="advanced-settings">
+                <summary>詳細設定</summary>
+                <div class="settings-grid">
+                  <fieldset>
+                    <legend>メインデッキ</legend>
+                    <div class="control-grid" data-scope="main" data-control-group="advanced"></div>
+                  </fieldset>
+                  <fieldset>
+                    <legend>EXデッキ</legend>
+                    <div class="control-grid" data-scope="extra" data-control-group="advanced"></div>
+                  </fieldset>
+                </div>
+              </details>
+            </div>
           </div>
-        </div>
-      </section>
-
-      <section class="panel" aria-labelledby="mainPreviewTitle">
-        <div class="section-head compact">
-          <div>
-            <p class="eyebrow">Main</p>
-            <h2 id="mainPreviewTitle">メイン切り出し</h2>
-          </div>
-          <span id="mainCount" class="badge">0枚</span>
-        </div>
-        <div id="mainCards" class="card-grid empty">画像を読み込んでプレビューしてください。</div>
-      </section>
-
-      <section class="panel" aria-labelledby="extraPreviewTitle">
-        <div class="section-head compact">
-          <div>
-            <p class="eyebrow">Extra</p>
-            <h2 id="extraPreviewTitle">EX参照</h2>
-          </div>
-          <span id="extraCount" class="badge">0枚</span>
-        </div>
-        <div id="extraCards" class="card-grid empty">保存済みEXカードがここに表示されます。</div>
+        </details>
       </section>
 
       <section class="panel span-2" aria-labelledby="practiceTitle">
@@ -123,6 +104,10 @@
               <span id="selectedCardStatus" class="badge">未選択</span>
             </div>
             <div id="practiceBoard" class="play-board" aria-label="カードを動かす展開練習盤面">
+              <div class="zone-group extra-monster-zones">
+                <h4>EXモンスター</h4>
+                <div class="zone-row compact-zones" data-zone-group="extraMonster"></div>
+              </div>
               <div class="zone-group">
                 <h4>モンスター</h4>
                 <div class="zone-row" data-zone-group="monster"></div>
@@ -150,10 +135,16 @@
                 </div>
               </div>
             </div>
-            <details class="extra-board-source">
-              <summary>EXカードを手札ゾーンに追加</summary>
-              <div id="extraBoardCards" class="card-grid compact-grid empty">保存済みEXカードがここに表示されます。</div>
-            </details>
+          </div>
+          <div class="extra-board-source" aria-labelledby="extraBoardTitle">
+            <div class="section-head compact">
+              <div>
+                <p class="eyebrow">Extra</p>
+                <h3 id="extraBoardTitle">EXデッキ</h3>
+              </div>
+              <span id="extraCount" class="badge">0枚</span>
+            </div>
+            <div id="extraBoardCards" class="card-grid compact-grid empty">保存済みEXカードがここに表示されます。</div>
           </div>
           <form id="logForm" class="log-form">
             <h3>展開ログ</h3>
@@ -176,6 +167,27 @@
             <button type="submit">ログを保存</button>
           </form>
         </div>
+      </section>
+
+      <section class="panel compact-preview-panel" aria-labelledby="mainPreviewTitle">
+        <div class="section-head compact">
+          <div>
+            <p class="eyebrow">Main</p>
+            <h2 id="mainPreviewTitle">メイン切り出し</h2>
+          </div>
+          <span id="mainCount" class="badge">0枚</span>
+        </div>
+        <div id="mainCards" class="card-grid empty">画像を読み込んでプレビューしてください。</div>
+      </section>
+
+      <section class="panel compact-preview-panel" aria-labelledby="extraPreviewTitle">
+        <div class="section-head compact">
+          <div>
+            <p class="eyebrow">Extra Preview</p>
+            <h2 id="extraPreviewTitle">EX切り出し</h2>
+          </div>
+        </div>
+        <div id="extraCards" class="card-grid empty">保存済みEXカードがここに表示されます。</div>
       </section>
 
       <section class="panel span-2" aria-labelledby="logsTitle">

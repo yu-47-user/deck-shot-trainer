@@ -138,6 +138,12 @@ small {
   padding: 1.2rem;
 }
 
+.setup-panel,
+.crop-panel,
+.compact-preview-panel {
+  padding: 0.95rem;
+}
+
 .span-2 {
   grid-column: 1 / -1;
 }
@@ -177,7 +183,7 @@ h3 {
   display: grid;
   place-items: center;
   gap: 0.45rem;
-  min-height: 160px;
+  min-height: 96px;
   border: 2px dashed #c9b89a;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.4);
@@ -200,8 +206,8 @@ h3 {
 
 .crop-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
-  gap: 1rem;
+  grid-template-columns: minmax(0, 0.95fr) minmax(320px, 1.05fr);
+  gap: 0.85rem;
 }
 
 .preview-stage {
@@ -212,6 +218,7 @@ canvas {
   display: block;
   width: 100%;
   height: auto;
+  max-height: 300px;
   border-radius: 18px;
   background: #1c211e;
 }
@@ -227,10 +234,22 @@ canvas {
   padding: 0.85rem;
 }
 
+.crop-workspace {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.36);
+}
+
+.crop-workspace summary,
 .advanced-settings summary {
   cursor: pointer;
   color: var(--ink);
   font-weight: 800;
+}
+
+.crop-workspace .crop-layout {
+  margin-top: 0.85rem;
 }
 
 .advanced-settings > .settings-grid {
@@ -310,6 +329,11 @@ textarea {
 .compact-grid {
   grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
   max-height: 250px;
+}
+
+.compact-preview-panel .card-grid {
+  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  max-height: 220px;
 }
 
 .card-thumb {
@@ -394,7 +418,7 @@ textarea {
 
 .practice-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+  grid-template-columns: minmax(0, 1.18fr) minmax(180px, 0.42fr) minmax(300px, 0.6fr);
   gap: 1rem;
 }
 
@@ -428,6 +452,16 @@ textarea {
 
 .zone-row {
   grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.compact-zones {
+  grid-template-columns: repeat(2, minmax(92px, 128px));
+  justify-content: center;
+}
+
+.extra-monster-zones .board-zone {
+  border-color: #d6a23e;
+  background: rgba(243, 155, 45, 0.13);
 }
 
 .board-zone,
@@ -498,11 +532,9 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 16px;
   padding: 0.8rem;
-}
-
-.extra-board-source summary {
-  cursor: pointer;
-  font-weight: 800;
+  align-self: start;
+  max-height: 560px;
+  overflow: auto;
 }
 
 .extra-board-source .card-grid {
@@ -561,6 +593,16 @@ textarea {
   font-size: 0.86rem;
 }
 
+@media (max-width: 1100px) {
+  .practice-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .extra-board-source {
+    max-height: none;
+  }
+}
+
 @media (max-width: 840px) {
   .hero,
   .crop-layout,
@@ -584,8 +626,17 @@ textarea {
     padding-bottom: 0.2rem;
   }
 
+  .compact-zones {
+    grid-template-columns: repeat(2, minmax(88px, 1fr));
+    overflow-x: visible;
+  }
+
   .side-zones {
     grid-template-columns: 1fr;
+  }
+
+  .extra-board-source {
+    max-height: none;
   }
 }
 
