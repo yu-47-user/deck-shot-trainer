@@ -1,0 +1,22 @@
+# This repository explicitly allows guarded automatic commit, push, and
+# GitHub Pull Request creation by Codex.
+enabled = true
+
+[guardrails]
+require_non_protected_branch = true
+require_clean_staging_before_commit = true
+require_explicit_file_staging = true
+require_relevant_checks = true
+require_diff_check = true
+require_secret_scan = true
+require_github_remote = true
+require_gh_auth = true
+forbid_plain_http_remote = true
+forbid_force_push = true
+forbid_destructive_git_commands = true
+forbid_unrelated_changes = true
+
+[checks]
+syntax = "node --check src/js/script.js"
+diff = "git diff --check"
+secret_scan = "rg -l --glob '!.codex/auto-pr.toml' \"api[_-]?key|token|secret|password|private key|BEGIN .*KEY\" ."

@@ -221,6 +221,22 @@ canvas {
   gap: 0.9rem;
 }
 
+.advanced-settings {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 0.85rem;
+}
+
+.advanced-settings summary {
+  cursor: pointer;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.advanced-settings > .settings-grid {
+  margin-top: 0.85rem;
+}
+
 fieldset {
   border: 1px solid var(--line);
   border-radius: 18px;
@@ -296,10 +312,11 @@ textarea {
 }
 
 .card-thumb img {
+  display: block;
   width: 100%;
-  aspect-ratio: 0.686 / 1;
-  border-radius: 8px;
-  object-fit: cover;
+  height: auto;
+  border-radius: 0;
+  object-fit: contain;
   background: #d5c7ac;
   box-shadow: 0 8px 18px rgba(45, 34, 20, 0.16);
 }
