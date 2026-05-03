@@ -109,13 +109,51 @@
             <p class="eyebrow">Step 3</p>
             <h2 id="practiceTitle">5枚ドローと展開ログ</h2>
           </div>
-          <button id="drawButton" class="primary" type="button">メインから5枚ドロー</button>
+          <div class="actions">
+            <button id="drawButton" class="primary" type="button">メインから5枚ドロー</button>
+            <button id="resetBoardButton" type="button">盤面リセット</button>
+            <button id="appendBoardButton" type="button">盤面をメモへ追記</button>
+          </div>
         </div>
 
         <div class="practice-grid">
-          <div>
-            <h3>現在の初手</h3>
-            <div id="handCards" class="hand-grid empty">保存済みメインデッキからドローします。</div>
+          <div class="practice-board-wrap">
+            <div class="section-head compact">
+              <h3>展開練習盤面</h3>
+              <span id="selectedCardStatus" class="badge">未選択</span>
+            </div>
+            <div id="practiceBoard" class="play-board" aria-label="カードを動かす展開練習盤面">
+              <div class="zone-group">
+                <h4>モンスター</h4>
+                <div class="zone-row" data-zone-group="monster"></div>
+              </div>
+              <div class="zone-group">
+                <h4>魔法・罠</h4>
+                <div class="zone-row" data-zone-group="spell"></div>
+              </div>
+              <div class="zone-group side-zones">
+                <div>
+                  <h4>手札</h4>
+                  <div id="handCards" class="hand-grid empty drop-zone" data-zone="hand">保存済みメインデッキからドローします。</div>
+                </div>
+                <div>
+                  <h4>墓地</h4>
+                  <div class="pile-zone drop-zone" data-zone="graveyard">0枚</div>
+                </div>
+                <div>
+                  <h4>フィールド</h4>
+                  <div class="pile-zone drop-zone" data-zone="field">空き</div>
+                </div>
+                <div>
+                  <h4>除外</h4>
+                  <div class="pile-zone drop-zone" data-zone="banished">0枚</div>
+                </div>
+              </div>
+            </div>
+            <details class="extra-board-source">
+              <summary>EXカードを手札ゾーンに追加</summary>
+              <div id="extraBoardCards" class="card-grid compact-grid empty">保存済みEXカードがここに表示されます。</div>
+            </details>
           </div>
           <form id="logForm" class="log-form">
             <h3>展開ログ</h3>

@@ -49,6 +49,22 @@ const CONTROL_DEFS = [
   { key: "ratio", label: "カード幅/高さ", min: 0.5, max: 0.9, step: 0.001 },
 ];
 
+const BOARD_ZONE_GROUPS = {
+  monster: ["monster-1", "monster-2", "monster-3", "monster-4", "monster-5"],
+  spell: ["spell-1", "spell-2", "spell-3", "spell-4", "spell-5"],
+};
+
+const BOARD_ZONE_LABELS = new Map([
+  ...BOARD_ZONE_GROUPS.monster.map((zone, index) => [zone, `M${index + 1}`]),
+  ...BOARD_ZONE_GROUPS.spell.map((zone, index) => [zone, `S/T${index + 1}`]),
+  ["field", "フィールド"],
+  ["hand", "手札"],
+  ["graveyard", "墓地"],
+  ["banished", "除外"],
+]);
+
+const FIELD_ZONES = new Set(["field", ...BOARD_ZONE_GROUPS.monster, ...BOARD_ZONE_GROUPS.spell]);
+
 const state = {
   db: null,
   sourceImage: null,
@@ -57,6 +73,10 @@ const state = {
   mainCards: [],
   extraCards: [],
   currentHand: [],
+  boardCards: [],
+  moveHistory: [],
+  nextBoardCardId: 1,
+  selectedBoardCardId: null,
   logs: [],
 };
 
@@ -71,9 +91,13 @@ const els = {
   mainCards: document.querySelector("#mainCards"),
   extraCards: document.querySelector("#extraCards"),
   handCards: document.querySelector("#handCards"),
+  extraBoardCards: document.querySelector("#extraBoardCards"),
+  selectedCardStatus: document.querySelector("#selectedCardStatus"),
   mainCount: document.querySelector("#mainCount"),
   extraCount: document.querySelector("#extraCount"),
   drawButton: document.querySelector("#drawButton"),
+  resetBoardButton: document.querySelector("#resetBoardButton"),
+  appendBoardButton: document.querySelector("#appendBoardButton"),
   logForm: document.querySelector("#logForm"),
   resultInput: document.querySelector("#resultInput"),
   tagsInput: document.querySelector("#tagsInput"),
@@ -132,6 +156,41 @@ async function getMeta(key) {
 
 function setStatus(message) {
   els.saveStatus.textContent = message;
+}
+
+function buildPracticeZones() {
+  for (const [group, zones] of Object.entries(BOARD_ZONE_GROUPS)) {
+    const row = document.querySelector(`[data-zone-group="${group}"]`);
+    if (!row) {
+      continue;
+    }
+
+    row.replaceChildren(
+      ...zones.map((zone) => {
+        const zoneElement = document.createElement("div");
+        zoneElement.className = "board-zone drop-zone";
+        zoneElement.dataset.zone = zone;
+        registerDropZone(zoneElement);
+        return zoneElement;
+      }),
+    );
+  }
+
+  document.querySelectorAll(".drop-zone").forEach(registerDropZone);
+}
+
+function registerDropZone(zoneElement) {
+  if (zoneElement.dataset.dropReady === "true") {
+    return;
+  }
+
+  zoneElement.dataset.dropReady = "true";
+  zoneElement.tabIndex = 0;
+  zoneElement.setAttribute("role", "button");
+  zoneElement.addEventListener("dragover", handleBoardDragOver);
+  zoneElement.addEventListener("drop", handleBoardDrop);
+  zoneElement.addEventListener("click", handleZoneClick);
+  zoneElement.addEventListener("keydown", handleZoneKeydown);
 }
 
 function buildControls() {
@@ -498,6 +557,7 @@ async function saveDeck() {
 function renderAllCards() {
   renderCards(els.mainCards, state.mainCards, "メイン", { canMarkStarter: true });
   renderCards(els.extraCards, state.extraCards, "EX");
+  renderExtraBoardCards();
   els.mainCount.textContent = `${state.mainCards.length}枚`;
   els.extraCount.textContent = `${state.extraCards.length}枚`;
 }
@@ -544,6 +604,289 @@ function createCardElement(card, label, options = {}) {
   return figure;
 }
 
+function createBoardCardElement(boardCard) {
+  const figure = document.createElement("figure");
+  const image = document.createElement("img");
+  const label = document.createElement("figcaption");
+  figure.className = "card-thumb board-card";
+  if (boardCard.isStarter) {
+    figure.classList.add("is-starter");
+  }
+  if (boardCard.instanceId === state.selectedBoardCardId) {
+    figure.classList.add("is-selected");
+  }
+
+  figure.tabIndex = 0;
+  figure.draggable = true;
+  figure.dataset.instanceId = boardCard.instanceId;
+  figure.setAttribute("role", "button");
+  figure.setAttribute("aria-pressed", String(boardCard.instanceId === state.selectedBoardCardId));
+  figure.setAttribute("aria-label", `${getBoardCardLabel(boardCard)}を選択`);
+  figure.addEventListener("click", (event) => {
+    event.stopPropagation();
+    toggleBoardCardSelection(boardCard.instanceId);
+  });
+  figure.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      toggleBoardCardSelection(boardCard.instanceId);
+    }
+  });
+  figure.addEventListener("dragstart", handleBoardDragStart);
+
+  image.src = boardCard.url;
+  image.alt = getBoardCardLabel(boardCard);
+  label.textContent = getBoardCardLabel(boardCard);
+  figure.append(image, label);
+  return figure;
+}
+
+function renderPracticeBoard() {
+  syncBoardStarterFlags();
+
+  for (const [zone, label] of BOARD_ZONE_LABELS) {
+    const zoneElement = document.querySelector(`[data-zone="${zone}"]`);
+    if (!zoneElement) {
+      continue;
+    }
+
+    const cards = state.boardCards.filter((card) => card.zone === zone);
+    const baseClass = getZoneBaseClass(zone);
+    zoneElement.className = `${baseClass} drop-zone${cards.length ? "" : " empty-zone"}`;
+    zoneElement.dataset.zone = zone;
+    zoneElement.dataset.zoneLabel = label;
+    zoneElement.setAttribute("aria-label", `${label}へ選択カードを移動`);
+
+    if (!cards.length) {
+      zoneElement.textContent = getEmptyZoneText(zone, label);
+      continue;
+    }
+
+    zoneElement.replaceChildren(...cards.map(createBoardCardElement));
+  }
+
+  const selectedCard = getSelectedBoardCard();
+  els.selectedCardStatus.textContent = selectedCard ? `${getBoardCardLabel(selectedCard)}を選択中` : "未選択";
+}
+
+function renderExtraBoardCards() {
+  if (!els.extraBoardCards) {
+    return;
+  }
+
+  if (!state.extraCards.length) {
+    els.extraBoardCards.className = "card-grid compact-grid empty";
+    els.extraBoardCards.textContent = "保存済みEXカードがここに表示されます。";
+    return;
+  }
+
+  els.extraBoardCards.className = "card-grid compact-grid";
+  els.extraBoardCards.replaceChildren(...state.extraCards.map(createExtraBoardSourceElement));
+}
+
+function createExtraBoardSourceElement(card) {
+  const button = document.createElement("button");
+  const image = document.createElement("img");
+  button.className = "extra-source-card";
+  button.type = "button";
+  button.setAttribute("aria-label", `EX ${card.index}を手札ゾーンに追加`);
+  button.addEventListener("click", () => addExtraCardToBoard(card));
+
+  image.src = card.url;
+  image.alt = `EX ${card.index}`;
+  button.append(image);
+  return button;
+}
+
+function getZoneBaseClass(zone) {
+  if (zone === "hand") {
+    return "hand-grid";
+  }
+  if (zone === "graveyard" || zone === "banished" || zone === "field") {
+    return "pile-zone";
+  }
+  return "board-zone";
+}
+
+function getEmptyZoneText(zone, label) {
+  if (zone === "hand") {
+    return state.currentHand.length ? "移動したカードはここへ戻せます。" : "保存済みメインデッキからドローします。";
+  }
+  if (zone === "graveyard" || zone === "banished") {
+    return "0枚";
+  }
+  if (zone === "field") {
+    return "空き";
+  }
+  return label;
+}
+
+function handleBoardDragStart(event) {
+  event.dataTransfer.setData("text/plain", event.currentTarget.dataset.instanceId);
+  event.dataTransfer.effectAllowed = "move";
+}
+
+function handleBoardDragOver(event) {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+}
+
+function handleBoardDrop(event) {
+  event.preventDefault();
+  const instanceId = event.dataTransfer.getData("text/plain");
+  const targetZone = event.currentTarget.dataset.zone;
+  moveBoardCard(instanceId, targetZone);
+}
+
+function handleZoneClick(event) {
+  if (event.target.closest(".board-card") || !state.selectedBoardCardId) {
+    return;
+  }
+
+  moveBoardCard(state.selectedBoardCardId, event.currentTarget.dataset.zone);
+}
+
+function handleZoneKeydown(event) {
+  if ((event.key !== "Enter" && event.key !== " ") || !state.selectedBoardCardId) {
+    return;
+  }
+
+  event.preventDefault();
+  moveBoardCard(state.selectedBoardCardId, event.currentTarget.dataset.zone);
+}
+
+function toggleBoardCardSelection(instanceId) {
+  const normalizedId = Number(instanceId);
+  state.selectedBoardCardId = state.selectedBoardCardId === normalizedId ? null : normalizedId;
+  renderPracticeBoard();
+}
+
+function moveBoardCard(instanceId, targetZone) {
+  const normalizedId = Number(instanceId);
+  const card = state.boardCards.find((item) => item.instanceId === normalizedId);
+  if (!card || !BOARD_ZONE_LABELS.has(targetZone)) {
+    return;
+  }
+
+  const previousZone = card.zone;
+  if (previousZone === targetZone) {
+    state.selectedBoardCardId = null;
+    renderPracticeBoard();
+    return;
+  }
+
+  if (FIELD_ZONES.has(targetZone)) {
+    const occupiedCard = state.boardCards.find((item) => item.zone === targetZone && item.instanceId !== normalizedId);
+    if (occupiedCard) {
+      occupiedCard.zone = "hand";
+      recordMove(occupiedCard, targetZone, "hand");
+    }
+  }
+
+  card.zone = targetZone;
+  state.selectedBoardCardId = null;
+  recordMove(card, previousZone, targetZone);
+  renderPracticeBoard();
+  setStatus(`${getBoardCardLabel(card)}を${BOARD_ZONE_LABELS.get(targetZone)}へ移動しました`);
+}
+
+function recordMove(card, fromZone, toZone) {
+  state.moveHistory.push({
+    cardId: card.cardId,
+    label: getBoardCardLabel(card),
+    from: fromZone,
+    fromLabel: BOARD_ZONE_LABELS.get(fromZone),
+    to: toZone,
+    toLabel: BOARD_ZONE_LABELS.get(toZone),
+    movedAt: new Date().toISOString(),
+  });
+}
+
+function resetPracticeBoard() {
+  state.boardCards = state.currentHand.map((card) => createBoardCard(card, "hand"));
+  state.moveHistory = [];
+  state.selectedBoardCardId = null;
+  renderPracticeBoard();
+  setStatus(state.currentHand.length ? "盤面を初手に戻しました" : "先に5枚ドローしてください");
+}
+
+function addExtraCardToBoard(card) {
+  const boardCard = createBoardCard(card, "hand");
+  state.boardCards.push(boardCard);
+  state.selectedBoardCardId = boardCard.instanceId;
+  renderPracticeBoard();
+  setStatus(`EX ${card.index}を手札ゾーンに追加しました。移動先を選んでください`);
+}
+
+function createBoardCard(card, zone) {
+  const instanceId = state.nextBoardCardId;
+  state.nextBoardCardId += 1;
+  return {
+    instanceId,
+    cardId: card.id,
+    scope: card.scope,
+    index: card.index,
+    url: card.url,
+    isStarter: Boolean(card.isStarter),
+    zone,
+  };
+}
+
+function syncBoardStarterFlags() {
+  const starterById = new Map(state.mainCards.map((card) => [card.id, Boolean(card.isStarter)]));
+  state.boardCards.forEach((boardCard) => {
+    if (starterById.has(boardCard.cardId)) {
+      boardCard.isStarter = starterById.get(boardCard.cardId);
+    }
+  });
+}
+
+function getSelectedBoardCard() {
+  return state.boardCards.find((card) => card.instanceId === state.selectedBoardCardId);
+}
+
+function getBoardCardLabel(card) {
+  const scopeLabel = card.scope === "extra" ? "EX" : "メイン";
+  return `${scopeLabel} ${card.index}${card.isStarter ? " 初動" : ""}`;
+}
+
+function buildBoardState() {
+  return [...BOARD_ZONE_LABELS.keys()].map((zone) => ({
+    zone,
+    label: BOARD_ZONE_LABELS.get(zone),
+    cards: state.boardCards
+      .filter((card) => card.zone === zone)
+      .map((card) => ({
+        cardId: card.cardId,
+        label: getBoardCardLabel(card),
+      })),
+  }));
+}
+
+function buildBoardSummary() {
+  const lines = buildBoardState()
+    .filter((zone) => zone.cards.length)
+    .map((zone) => `${zone.label}: ${zone.cards.map((card) => card.label).join(", ")}`);
+
+  if (!lines.length) {
+    return "";
+  }
+
+  return ["盤面:", ...lines].join("\n");
+}
+
+function appendBoardToMemo() {
+  const summary = buildBoardSummary();
+  if (!summary) {
+    setStatus("盤面にカードがありません");
+    return;
+  }
+
+  const prefix = els.memoInput.value.trim() ? "\n\n" : "";
+  els.memoInput.value = `${els.memoInput.value}${prefix}${summary}`;
+  setStatus("盤面をメモへ追記しました");
+}
+
 async function toggleStarterCard(card) {
   if (card.scope !== "main") {
     return;
@@ -585,17 +928,12 @@ function drawHand() {
   }
 
   state.currentHand = shuffle([...state.mainCards]).slice(0, 5);
-  renderCurrentHand();
+  resetPracticeBoard();
   setStatus("5枚ドロー済み");
 }
 
 function renderCurrentHand() {
-  if (!state.currentHand.length) {
-    return;
-  }
-
-  els.handCards.className = "hand-grid";
-  els.handCards.replaceChildren(...state.currentHand.map((card) => createCardElement(card, "初手")));
+  renderPracticeBoard();
 }
 
 function shuffle(items) {
@@ -627,6 +965,8 @@ async function saveLog(event) {
       .filter(Boolean),
     memo: els.memoInput.value.trim(),
     hand: state.currentHand.map((card) => card.id),
+    boardState: buildBoardState(),
+    moveHistory: state.moveHistory,
   };
 
   const transaction = state.db.transaction("logs", "readwrite");
@@ -693,6 +1033,8 @@ function renderLogs() {
       const article = document.createElement("article");
       const meta = document.createElement("div");
       const memo = document.createElement("p");
+      const boardSummary = document.createElement("p");
+      const moveHistory = document.createElement("p");
       article.className = "log-item";
       meta.className = "log-meta";
       meta.textContent = `${formatDate(log.createdAt)} / ${log.result} / 初手: ${log.hand.join(", ")}`;
@@ -703,9 +1045,37 @@ function renderLogs() {
       }
       memo.textContent = log.memo || "メモなし";
       article.append(meta, memo);
+      if (log.boardState?.some((zone) => zone.cards?.length)) {
+        boardSummary.className = "log-board";
+        boardSummary.textContent = formatSavedBoardState(log.boardState);
+        article.append(boardSummary);
+      }
+      if (log.moveHistory?.length) {
+        moveHistory.className = "log-board";
+        moveHistory.textContent = formatMoveHistory(log.moveHistory);
+        article.append(moveHistory);
+      }
       return article;
     }),
   );
+}
+
+function formatSavedBoardState(boardState) {
+  return boardState
+    .filter((zone) => zone.cards?.length)
+    .map((zone) => `${zone.label}: ${zone.cards.map((card) => card.label).join(", ")}`)
+    .join("\n");
+}
+
+function formatMoveHistory(moveHistory) {
+  return [
+    "移動履歴:",
+    ...moveHistory.map((move, index) => {
+      const fromLabel = move.fromLabel ?? BOARD_ZONE_LABELS.get(move.from) ?? move.from;
+      const toLabel = move.toLabel ?? BOARD_ZONE_LABELS.get(move.to) ?? move.to;
+      return `${index + 1}. ${move.label}: ${fromLabel} -> ${toLabel}`;
+    }),
+  ].join("\n");
 }
 
 function formatDate(value) {
@@ -735,17 +1105,21 @@ async function clearAllData() {
   state.mainCards = [];
   state.extraCards = [];
   state.currentHand = [];
+  state.boardCards = [];
+  state.moveHistory = [];
+  state.nextBoardCardId = 1;
+  state.selectedBoardCardId = null;
   state.logs = [];
   state.settings = structuredClone(DEFAULT_SETTINGS);
   buildControls();
   renderAllCards();
   renderLogs();
-  els.handCards.className = "hand-grid empty";
-  els.handCards.textContent = "保存済みメインデッキからドローします。";
+  renderPracticeBoard();
   setStatus("データ削除済み");
 }
 
 async function init() {
+  buildPracticeZones();
   buildControls();
   drawSourcePreview();
 
@@ -756,11 +1130,14 @@ async function init() {
     setStatus("保存機能エラー");
     console.error(error);
   }
+  renderPracticeBoard();
 
   els.imageInput.addEventListener("change", handleImageInput);
   els.previewButton.addEventListener("click", previewSlices);
   els.saveDeckButton.addEventListener("click", saveDeck);
   els.drawButton.addEventListener("click", drawHand);
+  els.resetBoardButton.addEventListener("click", resetPracticeBoard);
+  els.appendBoardButton.addEventListener("click", appendBoardToMemo);
   els.logForm.addEventListener("submit", saveLog);
   els.clearDataButton.addEventListener("click", clearAllData);
   els.presetButton.addEventListener("click", applyOfficialPreset);
