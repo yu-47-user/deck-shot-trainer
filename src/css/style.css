@@ -296,10 +296,11 @@ textarea {
 }
 
 .card-thumb img {
+  display: block;
   width: 100%;
-  aspect-ratio: 0.686 / 1;
+  height: auto;
   border-radius: 0;
-  object-fit: cover;
+  object-fit: contain;
   background: #d5c7ac;
   box-shadow: 0 8px 18px rgba(45, 34, 20, 0.16);
 }

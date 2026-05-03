@@ -406,10 +406,10 @@ async function createCards(scope) {
 }
 
 function clampCellToImage(cell, image) {
-  const x = Math.max(0, Math.round(cell.x));
-  const y = Math.max(0, Math.round(cell.y));
-  const right = Math.min(image.width, Math.round(cell.x + cell.width));
-  const bottom = Math.min(image.height, Math.round(cell.y + cell.height));
+  const x = Math.max(0, Math.floor(cell.x));
+  const y = Math.max(0, Math.floor(cell.y));
+  const right = Math.min(image.width, Math.ceil(cell.x + cell.width));
+  const bottom = Math.min(image.height, Math.ceil(cell.y + cell.height));
   const width = right - x;
   const height = bottom - y;
 
