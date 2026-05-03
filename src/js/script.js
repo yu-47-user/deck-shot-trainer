@@ -36,17 +36,17 @@ const DEFAULT_SETTINGS = {
 };
 
 const CONTROL_DEFS = [
-  ["x", "左位置 %", 0, 100, 0.1],
-  ["y", "上位置 %", 0, 100, 0.1],
-  ["width", "領域幅 %", 1, 100, 0.1],
-  ["height", "領域高 %", 1, 100, 0.1],
-  ["cols", "旧列数", 1, 20, 1],
-  ["rows", "旧行数", 1, 8, 1],
-  ["maxCols", "最大列数", 1, 10, 1],
-  ["count", "切り出し枚数", { main: 40, extra: 0 }, { main: 60, extra: 15 }, 1],
-  ["gapX", "横間隔 %", 0, 10, 0.1],
-  ["gapY", "縦間隔 %", 0, 10, 0.1],
-  ["ratio", "カード幅/高さ", 0.5, 0.9, 0.001],
+  { key: "x", label: "左位置 %", min: 0, max: 100, step: 0.1 },
+  { key: "y", label: "上位置 %", min: 0, max: 100, step: 0.1 },
+  { key: "width", label: "領域幅 %", min: 1, max: 100, step: 0.1 },
+  { key: "height", label: "領域高 %", min: 1, max: 100, step: 0.1 },
+  { key: "cols", label: "列数", min: 1, max: 20, step: 1, modes: ["grid"] },
+  { key: "rows", label: "行数", min: 1, max: 8, step: 1, modes: ["grid"] },
+  { key: "maxCols", label: "最大列数", min: 1, max: 10, step: 1, modes: ["wrap"] },
+  { key: "count", label: "切り出し枚数", min: { main: 40, extra: 0 }, max: { main: 60, extra: 15 }, step: 1 },
+  { key: "gapX", label: "横間隔 %", min: 0, max: 10, step: 0.1 },
+  { key: "gapY", label: "縦間隔 %", min: 0, max: 10, step: 0.1 },
+  { key: "ratio", label: "カード幅/高さ", min: 0.5, max: 0.9, step: 0.001 },
 ];
 
 const state = {
@@ -139,7 +139,12 @@ function buildControls() {
     const container = document.querySelector(`[data-scope="${scope}"]`);
     container.replaceChildren();
 
-    for (const [key, label, min, max, step] of CONTROL_DEFS) {
+    for (const controlDef of CONTROL_DEFS) {
+      if (controlDef.modes && !controlDef.modes.includes(state.settings[scope].mode)) {
+        continue;
+      }
+
+      const { key, label, min, max, step } = controlDef;
       const id = `${scope}-${key}`;
       const wrapper = document.createElement("label");
       const input = document.createElement("input");
@@ -179,13 +184,13 @@ function handleSettingInput(event) {
 }
 
 function clampSettingValue(scope, key, value) {
-  const controlDef = CONTROL_DEFS.find(([controlKey]) => controlKey === key);
+  const controlDef = CONTROL_DEFS.find((control) => control.key === key);
   if (!controlDef) {
     return value;
   }
 
-  const min = getScopedControlValue(controlDef[2], scope);
-  const max = getScopedControlValue(controlDef[3], scope);
+  const min = getScopedControlValue(controlDef.min, scope);
+  const max = getScopedControlValue(controlDef.max, scope);
   return Math.min(max, Math.max(min, value));
 }
 
