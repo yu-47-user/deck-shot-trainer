@@ -43,7 +43,7 @@ const CONTROL_DEFS = [
   { key: "cols", label: "列数", min: 1, max: 20, step: 1, modes: ["grid"] },
   { key: "rows", label: "行数", min: 1, max: 8, step: 1, modes: ["grid"] },
   { key: "maxCols", label: "最大列数", min: 1, max: 10, step: 1, modes: ["wrap"] },
-  { key: "count", label: "切り出し枚数", min: { main: 40, extra: 0 }, max: { main: 60, extra: 15 }, step: 1 },
+  { key: "count", label: "切り出し枚数", min: { main: 40, extra: 0 }, max: { main: 60, extra: 15 }, step: 1, group: "primary" },
   { key: "gapX", label: "横間隔 %", min: 0, max: 10, step: 0.1 },
   { key: "gapY", label: "縦間隔 %", min: 0, max: 10, step: 0.1 },
   { key: "ratio", label: "カード幅/高さ", min: 0.5, max: 0.9, step: 0.001 },
@@ -136,8 +136,8 @@ function setStatus(message) {
 
 function buildControls() {
   for (const scope of ["main", "extra"]) {
-    const container = document.querySelector(`[data-scope="${scope}"]`);
-    container.replaceChildren();
+    const containers = document.querySelectorAll(`[data-scope="${scope}"]`);
+    containers.forEach((container) => container.replaceChildren());
 
     for (const controlDef of CONTROL_DEFS) {
       if (controlDef.modes && !controlDef.modes.includes(state.settings[scope].mode)) {
@@ -145,6 +145,12 @@ function buildControls() {
       }
 
       const { key, label, min, max, step } = controlDef;
+      const group = controlDef.group ?? "advanced";
+      const container = document.querySelector(`[data-scope="${scope}"][data-control-group="${group}"]`);
+      if (!container) {
+        continue;
+      }
+
       const id = `${scope}-${key}`;
       const wrapper = document.createElement("label");
       const input = document.createElement("input");

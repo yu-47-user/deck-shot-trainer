@@ -221,6 +221,22 @@ canvas {
   gap: 0.9rem;
 }
 
+.advanced-settings {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 0.85rem;
+}
+
+.advanced-settings summary {
+  cursor: pointer;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.advanced-settings > .settings-grid {
+  margin-top: 0.85rem;
+}
+
 fieldset {
   border: 1px solid var(--line);
   border-radius: 18px;

@@ -40,7 +40,7 @@
         <div class="section-head">
           <div>
             <p class="eyebrow">Step 2</p>
-            <h2 id="cropTitle">切り出し設定</h2>
+            <h2 id="cropTitle">カード切り出し</h2>
           </div>
           <div class="actions">
             <button id="presetButton" type="button">公式画像プリセット</button>
@@ -52,18 +52,31 @@
         <div class="crop-layout">
           <div class="preview-stage">
             <canvas id="sourceCanvas" width="960" height="540" aria-label="アップロード画像プレビュー"></canvas>
-            <p class="hint">白枠がメイン、橙枠がEXです。公式画像プリセットは最大10列で折り返します。</p>
+            <p class="hint">白枠がメイン、橙枠がEXです。ずれる場合だけ詳細設定を開いて調整します。</p>
           </div>
 
           <div class="settings-grid">
             <fieldset>
               <legend>メインデッキ</legend>
-              <div class="control-grid" data-scope="main"></div>
+              <div class="control-grid" data-scope="main" data-control-group="primary"></div>
             </fieldset>
             <fieldset>
               <legend>EXデッキ</legend>
-              <div class="control-grid" data-scope="extra"></div>
+              <div class="control-grid" data-scope="extra" data-control-group="primary"></div>
             </fieldset>
+            <details class="advanced-settings">
+              <summary>詳細設定</summary>
+              <div class="settings-grid">
+                <fieldset>
+                  <legend>メインデッキ</legend>
+                  <div class="control-grid" data-scope="main" data-control-group="advanced"></div>
+                </fieldset>
+                <fieldset>
+                  <legend>EXデッキ</legend>
+                  <div class="control-grid" data-scope="extra" data-control-group="advanced"></div>
+                </fieldset>
+              </div>
+            </details>
           </div>
         </div>
       </section>
