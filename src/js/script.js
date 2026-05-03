@@ -50,11 +50,13 @@ const CONTROL_DEFS = [
 ];
 
 const BOARD_ZONE_GROUPS = {
+  extraMonster: ["extra-monster-1", "extra-monster-2"],
   monster: ["monster-1", "monster-2", "monster-3", "monster-4", "monster-5"],
   spell: ["spell-1", "spell-2", "spell-3", "spell-4", "spell-5"],
 };
 
 const BOARD_ZONE_LABELS = new Map([
+  ...BOARD_ZONE_GROUPS.extraMonster.map((zone, index) => [zone, `EX${index + 1}`]),
   ...BOARD_ZONE_GROUPS.monster.map((zone, index) => [zone, `M${index + 1}`]),
   ...BOARD_ZONE_GROUPS.spell.map((zone, index) => [zone, `S/T${index + 1}`]),
   ["field", "フィールド"],
@@ -63,7 +65,12 @@ const BOARD_ZONE_LABELS = new Map([
   ["banished", "除外"],
 ]);
 
-const FIELD_ZONES = new Set(["field", ...BOARD_ZONE_GROUPS.monster, ...BOARD_ZONE_GROUPS.spell]);
+const FIELD_ZONES = new Set([
+  "field",
+  ...BOARD_ZONE_GROUPS.extraMonster,
+  ...BOARD_ZONE_GROUPS.monster,
+  ...BOARD_ZONE_GROUPS.spell,
+]);
 
 const state = {
   db: null,
@@ -689,7 +696,7 @@ function createExtraBoardSourceElement(card) {
   const image = document.createElement("img");
   button.className = "extra-source-card";
   button.type = "button";
-  button.setAttribute("aria-label", `EX ${card.index}を手札ゾーンに追加`);
+  button.setAttribute("aria-label", `EX ${card.index}を選択して移動先を選ぶ`);
   button.addEventListener("click", () => addExtraCardToBoard(card));
 
   image.src = card.url;
@@ -815,7 +822,7 @@ function addExtraCardToBoard(card) {
   state.boardCards.push(boardCard);
   state.selectedBoardCardId = boardCard.instanceId;
   renderPracticeBoard();
-  setStatus(`EX ${card.index}を手札ゾーンに追加しました。移動先を選んでください`);
+  setStatus(`EX ${card.index}を選択しました。置きたいゾーンを選んでください`);
 }
 
 function createBoardCard(card, zone) {
