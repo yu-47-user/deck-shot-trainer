@@ -72,6 +72,11 @@ const FIELD_ZONES = new Set([
   ...BOARD_ZONE_GROUPS.spell,
 ]);
 
+const DRAG_DATA = {
+  boardCard: "application/x-deck-shot-board-card",
+  extraCard: "application/x-deck-shot-extra-card",
+};
+
 const state = {
   db: null,
   sourceImage: null,
@@ -682,12 +687,12 @@ function renderExtraBoardCards() {
   }
 
   if (!state.extraCards.length) {
-    els.extraBoardCards.className = "card-grid compact-grid empty";
+    els.extraBoardCards.className = "card-grid compact-grid extra-return-zone empty";
     els.extraBoardCards.textContent = "保存済みEXカードがここに表示されます。";
     return;
   }
 
-  els.extraBoardCards.className = "card-grid compact-grid";
+  els.extraBoardCards.className = "card-grid compact-grid extra-return-zone";
   els.extraBoardCards.replaceChildren(...state.extraCards.map(createExtraBoardSourceElement));
 }
 
@@ -696,8 +701,11 @@ function createExtraBoardSourceElement(card) {
   const image = document.createElement("img");
   button.className = "extra-source-card";
   button.type = "button";
+  button.draggable = true;
+  button.dataset.cardId = card.id;
   button.setAttribute("aria-label", `EX ${card.index}を選択して移動先を選ぶ`);
   button.addEventListener("click", () => addExtraCardToBoard(card));
+  button.addEventListener("dragstart", handleExtraSourceDragStart);
 
   image.src = card.url;
   image.alt = `EX ${card.index}`;
@@ -729,20 +737,57 @@ function getEmptyZoneText(zone, label) {
 }
 
 function handleBoardDragStart(event) {
-  event.dataTransfer.setData("text/plain", event.currentTarget.dataset.instanceId);
+  const instanceId = event.currentTarget.dataset.instanceId;
+  event.dataTransfer.setData(DRAG_DATA.boardCard, instanceId);
+  event.dataTransfer.setData("text/plain", instanceId);
   event.dataTransfer.effectAllowed = "move";
+}
+
+function handleExtraSourceDragStart(event) {
+  const cardId = event.currentTarget.dataset.cardId;
+  event.dataTransfer.setData(DRAG_DATA.extraCard, cardId);
+  event.dataTransfer.setData("text/plain", cardId);
+  event.dataTransfer.effectAllowed = "copy";
 }
 
 function handleBoardDragOver(event) {
   event.preventDefault();
-  event.dataTransfer.dropEffect = "move";
+  event.dataTransfer.dropEffect = hasDragDataType(event, DRAG_DATA.extraCard) ? "copy" : "move";
 }
 
 function handleBoardDrop(event) {
   event.preventDefault();
-  const instanceId = event.dataTransfer.getData("text/plain");
   const targetZone = event.currentTarget.dataset.zone;
+  const extraCardId = event.dataTransfer.getData(DRAG_DATA.extraCard);
+  if (extraCardId) {
+    const card = state.extraCards.find((item) => item.id === extraCardId);
+    if (card) {
+      addExtraCardToBoard(card, targetZone);
+    }
+    return;
+  }
+
+  const instanceId = event.dataTransfer.getData(DRAG_DATA.boardCard) || event.dataTransfer.getData("text/plain");
   moveBoardCard(instanceId, targetZone);
+}
+
+function handleExtraDeckDragOver(event) {
+  if (!hasDragDataType(event, DRAG_DATA.boardCard)) {
+    return;
+  }
+
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+}
+
+function handleExtraDeckDrop(event) {
+  event.preventDefault();
+  const instanceId = event.dataTransfer.getData(DRAG_DATA.boardCard) || event.dataTransfer.getData("text/plain");
+  returnBoardCardToExtraDeck(instanceId);
+}
+
+function hasDragDataType(event, type) {
+  return Array.from(event.dataTransfer?.types ?? []).includes(type);
 }
 
 function handleZoneClick(event) {
@@ -797,14 +842,14 @@ function moveBoardCard(instanceId, targetZone) {
   setStatus(`${getBoardCardLabel(card)}を${BOARD_ZONE_LABELS.get(targetZone)}へ移動しました`);
 }
 
-function recordMove(card, fromZone, toZone) {
+function recordMove(card, fromZone, toZone, fromLabel, toLabel) {
   state.moveHistory.push({
     cardId: card.cardId,
     label: getBoardCardLabel(card),
     from: fromZone,
-    fromLabel: BOARD_ZONE_LABELS.get(fromZone),
+    fromLabel: fromLabel ?? BOARD_ZONE_LABELS.get(fromZone),
     to: toZone,
-    toLabel: BOARD_ZONE_LABELS.get(toZone),
+    toLabel: toLabel ?? BOARD_ZONE_LABELS.get(toZone),
     movedAt: new Date().toISOString(),
   });
 }
@@ -817,12 +862,41 @@ function resetPracticeBoard() {
   setStatus(state.currentHand.length ? "盤面を初手に戻しました" : "先に5枚ドローしてください");
 }
 
-function addExtraCardToBoard(card) {
-  const boardCard = createBoardCard(card, "hand");
+function addExtraCardToBoard(card, targetZone = "hand") {
+  if (!BOARD_ZONE_LABELS.has(targetZone)) {
+    return;
+  }
+
+  const boardCard = createBoardCard(card, targetZone);
+  if (FIELD_ZONES.has(targetZone)) {
+    const occupiedCard = state.boardCards.find((item) => item.zone === targetZone);
+    if (occupiedCard) {
+      occupiedCard.zone = "hand";
+      recordMove(occupiedCard, targetZone, "hand");
+    }
+  }
+
   state.boardCards.push(boardCard);
   state.selectedBoardCardId = boardCard.instanceId;
+  recordMove(boardCard, "extraDeck", targetZone, "EXデッキ");
   renderPracticeBoard();
-  setStatus(`EX ${card.index}を選択しました。置きたいゾーンを選んでください`);
+  setStatus(`EX ${card.index}を${BOARD_ZONE_LABELS.get(targetZone)}へ追加しました`);
+}
+
+function returnBoardCardToExtraDeck(instanceId) {
+  const normalizedId = Number(instanceId);
+  const cardIndex = state.boardCards.findIndex((item) => item.instanceId === normalizedId);
+  const card = state.boardCards[cardIndex];
+  if (!card || card.scope !== "extra") {
+    return;
+  }
+
+  const previousZone = card.zone;
+  state.boardCards.splice(cardIndex, 1);
+  state.selectedBoardCardId = null;
+  recordMove(card, previousZone, "extraDeck", undefined, "EXデッキ");
+  renderPracticeBoard();
+  setStatus(`${getBoardCardLabel(card)}をEXデッキへ戻しました`);
 }
 
 function createBoardCard(card, zone) {
@@ -1129,6 +1203,8 @@ async function init() {
   buildPracticeZones();
   buildControls();
   drawSourcePreview();
+  els.extraBoardCards.addEventListener("dragover", handleExtraDeckDragOver);
+  els.extraBoardCards.addEventListener("drop", handleExtraDeckDrop);
 
   try {
     state.db = await openDatabase();
