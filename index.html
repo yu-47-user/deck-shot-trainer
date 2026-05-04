@@ -136,15 +136,27 @@
               </div>
             </div>
           </div>
-          <div class="extra-board-source" aria-labelledby="extraBoardTitle">
-            <div class="section-head compact">
-              <div>
-                <p class="eyebrow">Extra</p>
-                <h3 id="extraBoardTitle">EXデッキ</h3>
+          <div class="practice-deck-sources">
+            <div class="deck-source" aria-labelledby="mainDeckTitle">
+              <div class="section-head compact">
+                <div>
+                  <p class="eyebrow">Deck</p>
+                  <h3 id="mainDeckTitle">メインデッキ</h3>
+                </div>
+                <span id="mainDeckCount" class="badge">0枚</span>
               </div>
-              <span id="extraCount" class="badge">0枚</span>
+              <div id="mainDeckCards" class="card-grid compact-grid empty">保存済みメインカードがここに表示されます。</div>
             </div>
-            <div id="extraBoardCards" class="card-grid compact-grid empty">保存済みEXカードがここに表示されます。</div>
+            <div class="deck-source" aria-labelledby="extraBoardTitle">
+              <div class="section-head compact">
+                <div>
+                  <p class="eyebrow">Extra</p>
+                  <h3 id="extraBoardTitle">EXデッキ</h3>
+                </div>
+                <span id="extraCount" class="badge">0枚</span>
+              </div>
+              <div id="extraBoardCards" class="card-grid compact-grid empty">保存済みEXカードがここに表示されます。</div>
+            </div>
           </div>
           <form id="logForm" class="log-form">
             <h3>展開ログ</h3>

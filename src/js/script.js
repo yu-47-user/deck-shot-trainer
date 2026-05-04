@@ -74,6 +74,7 @@ const FIELD_ZONES = new Set([
 
 const DRAG_DATA = {
   boardCard: "application/x-deck-shot-board-card",
+  mainCard: "application/x-deck-shot-main-card",
   extraCard: "application/x-deck-shot-extra-card",
 };
 
@@ -84,11 +85,14 @@ const state = {
   settings: structuredClone(DEFAULT_SETTINGS),
   mainCards: [],
   extraCards: [],
+  remainingMainCards: [],
+  remainingExtraCards: [],
   currentHand: [],
   boardCards: [],
   moveHistory: [],
   nextBoardCardId: 1,
   selectedBoardCardId: null,
+  resetSnapshot: null,
   logs: [],
 };
 
@@ -102,10 +106,12 @@ const els = {
   clearDataButton: document.querySelector("#clearDataButton"),
   mainCards: document.querySelector("#mainCards"),
   extraCards: document.querySelector("#extraCards"),
+  mainDeckCards: document.querySelector("#mainDeckCards"),
   handCards: document.querySelector("#handCards"),
   extraBoardCards: document.querySelector("#extraBoardCards"),
   selectedCardStatus: document.querySelector("#selectedCardStatus"),
   mainCount: document.querySelector("#mainCount"),
+  mainDeckCount: document.querySelector("#mainDeckCount"),
   extraCount: document.querySelector("#extraCount"),
   drawButton: document.querySelector("#drawButton"),
   resetBoardButton: document.querySelector("#resetBoardButton"),
@@ -444,6 +450,7 @@ async function previewSlices() {
 
   state.mainCards = await createCards("main");
   state.extraCards = await createCards("extra");
+  initializePracticeDecks();
   renderAllCards();
   setStatus("プレビュー更新");
 }
@@ -563,15 +570,17 @@ async function saveDeck() {
   });
 
   await transactionComplete(transaction);
+  initializePracticeDecks();
+  renderAllCards();
+  renderPracticeBoard();
   setStatus("保存済み");
 }
 
 function renderAllCards() {
   renderCards(els.mainCards, state.mainCards, "メイン", { canMarkStarter: true });
   renderCards(els.extraCards, state.extraCards, "EX");
-  renderExtraBoardCards();
+  renderPracticeDeckSources();
   els.mainCount.textContent = `${state.mainCards.length}枚`;
-  els.extraCount.textContent = `${state.extraCards.length}枚`;
 }
 
 function renderCards(container, cards, label, options = {}) {
@@ -681,34 +690,64 @@ function renderPracticeBoard() {
   els.selectedCardStatus.textContent = selectedCard ? `${getBoardCardLabel(selectedCard)}を選択中` : "未選択";
 }
 
+function renderPracticeDeckSources() {
+  renderMainDeckCards();
+  renderExtraBoardCards();
+}
+
+function renderMainDeckCards() {
+  if (!els.mainDeckCards) {
+    return;
+  }
+
+  els.mainDeckCount.textContent = `${state.remainingMainCards.length}枚`;
+
+  if (!state.remainingMainCards.length) {
+    els.mainDeckCards.className = "card-grid compact-grid deck-return-zone empty";
+    els.mainDeckCards.textContent = state.mainCards.length ? "残りメインデッキはありません。" : "保存済みメインカードがここに表示されます。";
+    return;
+  }
+
+  els.mainDeckCards.className = "card-grid compact-grid deck-return-zone";
+  els.mainDeckCards.replaceChildren(
+    ...state.remainingMainCards.map((card) => createDeckSourceElement(card, "main")),
+  );
+}
+
 function renderExtraBoardCards() {
   if (!els.extraBoardCards) {
     return;
   }
 
-  if (!state.extraCards.length) {
-    els.extraBoardCards.className = "card-grid compact-grid extra-return-zone empty";
-    els.extraBoardCards.textContent = "保存済みEXカードがここに表示されます。";
+  els.extraCount.textContent = `${state.remainingExtraCards.length}枚`;
+
+  if (!state.remainingExtraCards.length) {
+    els.extraBoardCards.className = "card-grid compact-grid deck-return-zone empty";
+    els.extraBoardCards.textContent = state.extraCards.length ? "残りEXデッキはありません。" : "保存済みEXカードがここに表示されます。";
     return;
   }
 
-  els.extraBoardCards.className = "card-grid compact-grid extra-return-zone";
-  els.extraBoardCards.replaceChildren(...state.extraCards.map(createExtraBoardSourceElement));
+  els.extraBoardCards.className = "card-grid compact-grid deck-return-zone";
+  els.extraBoardCards.replaceChildren(
+    ...state.remainingExtraCards.map((card) => createDeckSourceElement(card, "extra")),
+  );
 }
 
-function createExtraBoardSourceElement(card) {
+function createDeckSourceElement(card, scope) {
   const button = document.createElement("button");
   const image = document.createElement("img");
-  button.className = "extra-source-card";
+  const scopeLabel = scope === "extra" ? "EX" : "メイン";
+  button.className = "deck-source-card";
   button.type = "button";
   button.draggable = true;
   button.dataset.cardId = card.id;
-  button.setAttribute("aria-label", `EX ${card.index}を選択して移動先を選ぶ`);
-  button.addEventListener("click", () => addExtraCardToBoard(card));
-  button.addEventListener("dragstart", handleExtraSourceDragStart);
+  button.dataset.scope = scope;
+  button.setAttribute("aria-label", `${scopeLabel} ${card.index}を手札へ追加`);
+  button.addEventListener("click", () => addSourceCardToBoard(card, scope, "hand"));
+  button.addEventListener("dragstart", handleDeckSourceDragStart);
 
   image.src = card.url;
-  image.alt = `EX ${card.index}`;
+  image.alt = `${scopeLabel} ${card.index}`;
   button.append(image);
   return button;
 }
@@ -743,26 +782,37 @@ function handleBoardDragStart(event) {
   event.dataTransfer.effectAllowed = "move";
 }
 
-function handleExtraSourceDragStart(event) {
+function handleDeckSourceDragStart(event) {
   const cardId = event.currentTarget.dataset.cardId;
-  event.dataTransfer.setData(DRAG_DATA.extraCard, cardId);
+  const scope = event.currentTarget.dataset.scope;
+  const dataType = scope === "extra" ? DRAG_DATA.extraCard : DRAG_DATA.mainCard;
+  event.dataTransfer.setData(dataType, cardId);
   event.dataTransfer.setData("text/plain", cardId);
   event.dataTransfer.effectAllowed = "copy";
 }
 
 function handleBoardDragOver(event) {
   event.preventDefault();
-  event.dataTransfer.dropEffect = hasDragDataType(event, DRAG_DATA.extraCard) ? "copy" : "move";
+  event.dataTransfer.dropEffect = hasSourceCardDragData(event) ? "copy" : "move";
 }
 
 function handleBoardDrop(event) {
   event.preventDefault();
   const targetZone = event.currentTarget.dataset.zone;
+  const mainCardId = event.dataTransfer.getData(DRAG_DATA.mainCard);
+  if (mainCardId) {
+    const card = state.remainingMainCards.find((item) => item.id === mainCardId);
+    if (card) {
+      addSourceCardToBoard(card, "main", targetZone);
+    }
+    return;
+  }
+
   const extraCardId = event.dataTransfer.getData(DRAG_DATA.extraCard);
   if (extraCardId) {
-    const card = state.extraCards.find((item) => item.id === extraCardId);
+    const card = state.remainingExtraCards.find((item) => item.id === extraCardId);
     if (card) {
-      addExtraCardToBoard(card, targetZone);
+      addSourceCardToBoard(card, "extra", targetZone);
     }
     return;
   }
@@ -783,11 +833,30 @@ function handleExtraDeckDragOver(event) {
 function handleExtraDeckDrop(event) {
   event.preventDefault();
   const instanceId = event.dataTransfer.getData(DRAG_DATA.boardCard) || event.dataTransfer.getData("text/plain");
-  returnBoardCardToExtraDeck(instanceId);
+  returnBoardCardToSourceDeck(instanceId, "extra");
+}
+
+function handleMainDeckDragOver(event) {
+  if (!hasDragDataType(event, DRAG_DATA.boardCard)) {
+    return;
+  }
+
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+}
+
+function handleMainDeckDrop(event) {
+  event.preventDefault();
+  const instanceId = event.dataTransfer.getData(DRAG_DATA.boardCard) || event.dataTransfer.getData("text/plain");
+  returnBoardCardToSourceDeck(instanceId, "main");
 }
 
 function hasDragDataType(event, type) {
   return Array.from(event.dataTransfer?.types ?? []).includes(type);
+}
+
+function hasSourceCardDragData(event) {
+  return hasDragDataType(event, DRAG_DATA.mainCard) || hasDragDataType(event, DRAG_DATA.extraCard);
 }
 
 function handleZoneClick(event) {
@@ -855,18 +924,51 @@ function recordMove(card, fromZone, toZone, fromLabel, toLabel) {
 }
 
 function resetPracticeBoard() {
+  if (state.resetSnapshot) {
+    state.currentHand = [...state.resetSnapshot.currentHand];
+    state.remainingMainCards = [...state.resetSnapshot.remainingMainCards];
+    state.remainingExtraCards = [...state.resetSnapshot.remainingExtraCards];
+  }
+
   state.boardCards = state.currentHand.map((card) => createBoardCard(card, "hand"));
   state.moveHistory = [];
   state.selectedBoardCardId = null;
+  renderPracticeDeckSources();
   renderPracticeBoard();
   setStatus(state.currentHand.length ? "盤面を初手に戻しました" : "先に5枚ドローしてください");
 }
 
-function addExtraCardToBoard(card, targetZone = "hand") {
+function initializePracticeDecks() {
+  state.remainingMainCards = [...state.mainCards];
+  state.remainingExtraCards = [...state.extraCards];
+  state.currentHand = [];
+  state.boardCards = [];
+  state.moveHistory = [];
+  state.nextBoardCardId = 1;
+  state.selectedBoardCardId = null;
+  state.resetSnapshot = null;
+}
+
+function createPracticeSnapshot() {
+  return {
+    currentHand: [...state.currentHand],
+    remainingMainCards: [...state.remainingMainCards],
+    remainingExtraCards: [...state.remainingExtraCards],
+  };
+}
+
+function addSourceCardToBoard(card, scope, targetZone = "hand") {
   if (!BOARD_ZONE_LABELS.has(targetZone)) {
     return;
   }
 
+  const sourceDeck = scope === "extra" ? state.remainingExtraCards : state.remainingMainCards;
+  const sourceIndex = sourceDeck.findIndex((item) => item.id === card.id);
+  if (sourceIndex === -1) {
+    return;
+  }
+
+  sourceDeck.splice(sourceIndex, 1);
   const boardCard = createBoardCard(card, targetZone);
   if (FIELD_ZONES.has(targetZone)) {
     const occupiedCard = state.boardCards.find((item) => item.zone === targetZone);
@@ -878,25 +980,56 @@ function addExtraCardToBoard(card, targetZone = "hand") {
 
   state.boardCards.push(boardCard);
   state.selectedBoardCardId = boardCard.instanceId;
-  recordMove(boardCard, "extraDeck", targetZone, "EXデッキ");
+  recordMove(boardCard, getSourceDeckZone(scope), targetZone, getSourceDeckLabel(scope));
+  renderPracticeDeckSources();
   renderPracticeBoard();
-  setStatus(`EX ${card.index}を${BOARD_ZONE_LABELS.get(targetZone)}へ追加しました`);
+  setStatus(`${getBoardCardLabel(boardCard)}を${BOARD_ZONE_LABELS.get(targetZone)}へ追加しました`);
 }
 
-function returnBoardCardToExtraDeck(instanceId) {
+function returnBoardCardToSourceDeck(instanceId, scope) {
   const normalizedId = Number(instanceId);
   const cardIndex = state.boardCards.findIndex((item) => item.instanceId === normalizedId);
   const card = state.boardCards[cardIndex];
-  if (!card || card.scope !== "extra") {
+  if (!card || card.scope !== scope) {
     return;
   }
 
   const previousZone = card.zone;
   state.boardCards.splice(cardIndex, 1);
+  restoreCardToSourceDeck(card);
   state.selectedBoardCardId = null;
-  recordMove(card, previousZone, "extraDeck", undefined, "EXデッキ");
+  recordMove(card, previousZone, getSourceDeckZone(scope), undefined, getSourceDeckLabel(scope));
+  renderPracticeDeckSources();
   renderPracticeBoard();
-  setStatus(`${getBoardCardLabel(card)}をEXデッキへ戻しました`);
+  setStatus(`${getBoardCardLabel(card)}を${getSourceDeckLabel(scope)}へ戻しました`);
+}
+
+function restoreCardToSourceDeck(boardCard) {
+  const targetDeck = boardCard.scope === "extra" ? state.remainingExtraCards : state.remainingMainCards;
+  if (targetDeck.some((card) => card.id === boardCard.cardId)) {
+    return;
+  }
+
+  const sourceCard = getSourceCardByBoardCard(boardCard);
+  if (!sourceCard) {
+    return;
+  }
+
+  targetDeck.push(sourceCard);
+  targetDeck.sort((a, b) => a.index - b.index);
+}
+
+function getSourceCardByBoardCard(boardCard) {
+  const sourceCards = boardCard.scope === "extra" ? state.extraCards : state.mainCards;
+  return sourceCards.find((card) => card.id === boardCard.cardId);
+}
+
+function getSourceDeckZone(scope) {
+  return scope === "extra" ? "extraDeck" : "mainDeck";
+}
+
+function getSourceDeckLabel(scope) {
+  return scope === "extra" ? "EXデッキ" : "メインデッキ";
 }
 
 function createBoardCard(card, zone) {
@@ -1008,9 +1141,13 @@ function drawHand() {
     return;
   }
 
-  state.currentHand = shuffle([...state.mainCards]).slice(0, 5);
+  const shuffledMainCards = shuffle([...state.mainCards]);
+  state.currentHand = shuffledMainCards.slice(0, 5);
+  state.remainingMainCards = shuffledMainCards.slice(5);
+  state.remainingExtraCards = [...state.extraCards];
+  state.resetSnapshot = createPracticeSnapshot();
   resetPracticeBoard();
-  setStatus("5枚ドロー済み");
+  setStatus(`5枚ドロー済み / メイン残り${state.remainingMainCards.length}枚`);
 }
 
 function renderCurrentHand() {
@@ -1046,6 +1183,8 @@ async function saveLog(event) {
       .filter(Boolean),
     memo: els.memoInput.value.trim(),
     hand: state.currentHand.map((card) => card.id),
+    remainingMainDeck: state.remainingMainCards.map((card) => card.id),
+    remainingExtraDeck: state.remainingExtraCards.map((card) => card.id),
     boardState: buildBoardState(),
     moveHistory: state.moveHistory,
   };
@@ -1076,6 +1215,7 @@ async function loadSavedState() {
 
   state.mainCards = hydrateCards(cards.filter((card) => card.scope === "main"));
   state.extraCards = hydrateCards(cards.filter((card) => card.scope === "extra"));
+  initializePracticeDecks();
   renderAllCards();
   await loadLogs();
 
@@ -1185,11 +1325,14 @@ async function clearAllData() {
 
   state.mainCards = [];
   state.extraCards = [];
+  state.remainingMainCards = [];
+  state.remainingExtraCards = [];
   state.currentHand = [];
   state.boardCards = [];
   state.moveHistory = [];
   state.nextBoardCardId = 1;
   state.selectedBoardCardId = null;
+  state.resetSnapshot = null;
   state.logs = [];
   state.settings = structuredClone(DEFAULT_SETTINGS);
   buildControls();
@@ -1224,6 +1367,8 @@ async function init() {
   els.logForm.addEventListener("submit", saveLog);
   els.clearDataButton.addEventListener("click", clearAllData);
   els.presetButton.addEventListener("click", applyOfficialPreset);
+  els.mainDeckCards.addEventListener("dragover", handleMainDeckDragOver);
+  els.mainDeckCards.addEventListener("drop", handleMainDeckDrop);
 }
 
 init();

@@ -528,26 +528,31 @@ textarea {
   align-content: center;
 }
 
-.extra-board-source {
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 0.8rem;
+.practice-deck-sources {
+  display: grid;
+  gap: 0.85rem;
   align-self: start;
   max-height: 560px;
   overflow: auto;
 }
 
-.extra-board-source .card-grid {
+.deck-source {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 0.8rem;
+}
+
+.deck-source .card-grid {
   margin-top: 0.75rem;
 }
 
-.extra-return-zone {
+.deck-return-zone {
   border-radius: 12px;
   outline: 1px dashed rgba(138, 164, 156, 0.5);
   outline-offset: 0.25rem;
 }
 
-.extra-source-card {
+.deck-source-card {
   display: block;
   min-height: 0;
   border-radius: 8px;
@@ -557,7 +562,7 @@ textarea {
   cursor: grab;
 }
 
-.extra-source-card img {
+.deck-source-card img {
   display: block;
   width: 100%;
   height: auto;
@@ -605,7 +610,7 @@ textarea {
     grid-template-columns: 1fr;
   }
 
-  .extra-board-source {
+  .practice-deck-sources {
     max-height: none;
   }
 }
@@ -642,7 +647,7 @@ textarea {
     grid-template-columns: 1fr;
   }
 
-  .extra-board-source {
+  .practice-deck-sources {
     max-height: none;
   }
 }
