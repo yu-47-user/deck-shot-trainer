@@ -418,12 +418,14 @@ textarea {
 
 .practice-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.18fr) minmax(180px, 0.42fr) minmax(300px, 0.6fr);
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+  align-items: start;
   gap: 1rem;
 }
 
 .practice-board-wrap {
   display: grid;
+  grid-column: 1 / -1;
   gap: 0.85rem;
   min-width: 0;
 }
@@ -469,7 +471,7 @@ textarea {
   position: relative;
   display: grid;
   place-items: center;
-  min-height: 142px;
+  min-height: 152px;
   border: 1px dashed #8aa49c;
   border-radius: 12px;
   padding: 1.25rem 0.45rem 0.45rem;
@@ -504,16 +506,18 @@ textarea {
 .board-zone .board-card,
 .pile-zone .board-card,
 .hand-grid .board-card {
-  width: min(100%, 94px);
+  width: min(100%, 72px);
 }
 
 .side-zones {
-  grid-template-columns: minmax(0, 1fr) 120px 120px 120px;
+  grid-template-columns: minmax(0, 1fr) repeat(3, minmax(104px, 0.24fr));
   align-items: start;
 }
 
 .side-zones .hand-grid {
-  min-height: 156px;
+  min-height: 132px;
+  max-height: 220px;
+  overflow: auto;
   border: 1px dashed #8aa49c;
   border-radius: 12px;
   padding: 1.35rem 0.55rem 0.55rem;
@@ -521,7 +525,7 @@ textarea {
 }
 
 .pile-zone {
-  min-height: 156px;
+  min-height: 132px;
 }
 
 .compact-pile-zone {
