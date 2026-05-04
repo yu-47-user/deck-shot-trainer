@@ -566,6 +566,12 @@ textarea {
   box-shadow: 0 4px 9px rgba(45, 34, 20, 0.14);
 }
 
+.compact-pile-zone.empty-zone {
+  place-items: center;
+  align-content: center;
+  padding: 1.25rem 0.45rem 0.45rem;
+}
+
 .empty-zone {
   align-content: center;
 }
@@ -585,8 +591,8 @@ textarea {
 }
 
 .deck-source .card-grid {
-  grid-template-columns: repeat(auto-fill, minmax(34px, 1fr));
-  gap: 0.32rem;
+  grid-template-columns: repeat(auto-fill, minmax(30px, 1fr));
+  gap: 0.25rem;
   margin-top: 0.75rem;
 }
 
