@@ -524,6 +524,48 @@ textarea {
   min-height: 156px;
 }
 
+.compact-pile-zone {
+  grid-template-columns: repeat(auto-fill, minmax(34px, 1fr));
+  place-items: start;
+  align-content: start;
+  gap: 0.28rem;
+  max-height: 168px;
+  overflow: auto;
+  padding: 1.65rem 0.38rem 0.42rem;
+}
+
+.compact-pile-zone .pile-count {
+  position: absolute;
+  top: 0.32rem;
+  right: 0.42rem;
+  z-index: 1;
+  border-radius: 999px;
+  padding: 0.1rem 0.38rem;
+  color: var(--accent-strong);
+  background: #f5ded4;
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1.2;
+  pointer-events: none;
+}
+
+.compact-pile-zone .board-card {
+  width: 100%;
+  min-width: 0;
+}
+
+.compact-pile-zone .board-card figcaption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+.compact-pile-zone .board-card img {
+  box-shadow: 0 4px 9px rgba(45, 34, 20, 0.14);
+}
+
 .empty-zone {
   align-content: center;
 }
@@ -543,6 +585,8 @@ textarea {
 }
 
 .deck-source .card-grid {
+  grid-template-columns: repeat(auto-fill, minmax(34px, 1fr));
+  gap: 0.32rem;
   margin-top: 0.75rem;
 }
 
@@ -567,6 +611,7 @@ textarea {
   width: 100%;
   height: auto;
   background: #d5c7ac;
+  box-shadow: 0 4px 9px rgba(45, 34, 20, 0.13);
 }
 
 .log-form {
@@ -612,6 +657,10 @@ textarea {
 
   .practice-deck-sources {
     max-height: none;
+  }
+
+  .deck-source .card-grid {
+    grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
   }
 }
 
