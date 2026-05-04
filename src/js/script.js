@@ -72,6 +72,8 @@ const FIELD_ZONES = new Set([
   ...BOARD_ZONE_GROUPS.spell,
 ]);
 
+const COMPACT_PILE_ZONES = new Set(["graveyard", "banished"]);
+
 const DRAG_DATA = {
   boardCard: "application/x-deck-shot-board-card",
   mainCard: "application/x-deck-shot-main-card",
@@ -673,13 +675,28 @@ function renderPracticeBoard() {
 
     const cards = state.boardCards.filter((card) => card.zone === zone);
     const baseClass = getZoneBaseClass(zone);
-    zoneElement.className = `${baseClass} drop-zone${cards.length ? "" : " empty-zone"}`;
+    const zoneClasses = [baseClass, "drop-zone"];
+    if (COMPACT_PILE_ZONES.has(zone)) {
+      zoneClasses.push("compact-pile-zone");
+    }
+    if (!cards.length) {
+      zoneClasses.push("empty-zone");
+    }
+    zoneElement.className = zoneClasses.join(" ");
     zoneElement.dataset.zone = zone;
     zoneElement.dataset.zoneLabel = label;
     zoneElement.setAttribute("aria-label", `${label}へ選択カードを移動`);
 
     if (!cards.length) {
       zoneElement.textContent = getEmptyZoneText(zone, label);
+      continue;
+    }
+
+    if (COMPACT_PILE_ZONES.has(zone)) {
+      const countBadge = document.createElement("span");
+      countBadge.className = "pile-count";
+      countBadge.textContent = `${cards.length}枚`;
+      zoneElement.replaceChildren(countBadge, ...cards.map(createBoardCardElement));
       continue;
     }
 
