@@ -96,6 +96,7 @@ const state = {
   selectedBoardCardId: null,
   resetSnapshot: null,
   logs: [],
+  hasSavedDeck: false,
 };
 
 const els = {
@@ -116,6 +117,7 @@ const els = {
   drawButton: document.querySelector("#drawButton"),
   resetBoardButton: document.querySelector("#resetBoardButton"),
   appendBoardButton: document.querySelector("#appendBoardButton"),
+  toggleSetupButton: document.querySelector("#toggleSetupButton"),
   logForm: document.querySelector("#logForm"),
   resultInput: document.querySelector("#resultInput"),
   tagsInput: document.querySelector("#tagsInput"),
@@ -570,6 +572,7 @@ async function saveDeck() {
   });
 
   await transactionComplete(transaction);
+  state.hasSavedDeck = true;
   initializePracticeDecks();
   renderAllCards();
   renderPracticeBoard();
@@ -578,6 +581,19 @@ async function saveDeck() {
 
 function renderAllCards() {
   renderPracticeDeckSources();
+  updateLoadedLayoutState();
+}
+
+function updateLoadedLayoutState() {
+  document.body.classList.toggle("deck-ready", state.hasSavedDeck);
+  if (!state.hasSavedDeck) {
+    document.body.classList.remove("show-setup");
+  }
+  if (els.toggleSetupButton) {
+    els.toggleSetupButton.textContent = document.body.classList.contains("show-setup")
+      ? "読込UIを隠す"
+      : "読込UIを表示";
+  }
 }
 
 function renderCards(container, cards, label, options = {}) {
@@ -1237,6 +1253,7 @@ async function loadSavedState() {
 
   state.mainCards = hydrateCards(cards.filter((card) => card.scope === "main"));
   state.extraCards = hydrateCards(cards.filter((card) => card.scope === "extra"));
+  state.hasSavedDeck = state.mainCards.length > 0;
   initializePracticeDecks();
   renderAllCards();
   await loadLogs();
@@ -1356,6 +1373,7 @@ async function clearAllData() {
   state.selectedBoardCardId = null;
   state.resetSnapshot = null;
   state.logs = [];
+  state.hasSavedDeck = false;
   state.settings = structuredClone(DEFAULT_SETTINGS);
   buildControls();
   renderAllCards();
@@ -1386,6 +1404,12 @@ async function init() {
   els.drawButton.addEventListener("click", drawHand);
   els.resetBoardButton.addEventListener("click", resetPracticeBoard);
   els.appendBoardButton.addEventListener("click", appendBoardToMemo);
+  if (els.toggleSetupButton) {
+    els.toggleSetupButton.addEventListener("click", () => {
+      document.body.classList.toggle("show-setup");
+      updateLoadedLayoutState();
+    });
+  }
   els.logForm.addEventListener("submit", saveLog);
   els.clearDataButton.addEventListener("click", clearAllData);
   els.presetButton.addEventListener("click", applyOfficialPreset);

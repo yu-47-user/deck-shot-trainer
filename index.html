@@ -94,6 +94,7 @@
             <button id="drawButton" class="primary" type="button">メインから5枚ドロー</button>
             <button id="resetBoardButton" type="button">盤面リセット</button>
             <button id="appendBoardButton" type="button">盤面をメモへ追記</button>
+            <button id="toggleSetupButton" class="setup-toggle" type="button">読込UIを表示</button>
           </div>
         </div>
 
@@ -108,58 +109,60 @@
                 <h4>EXモンスター</h4>
                 <div class="zone-row compact-zones" data-zone-group="extraMonster"></div>
               </div>
-              <div class="zone-group">
+              <div class="zone-group monster-zones">
                 <h4>モンスター</h4>
                 <div class="zone-row" data-zone-group="monster"></div>
               </div>
-              <div class="zone-group">
+              <div class="zone-group spell-zones">
                 <h4>魔法・罠</h4>
                 <div class="zone-row" data-zone-group="spell"></div>
               </div>
               <div class="zone-group side-zones">
-                <div>
-                  <h4>手札</h4>
-                  <div id="handCards" class="hand-grid empty drop-zone" data-zone="hand"></div>
-                </div>
-                <div>
+                <div class="side-zone side-zone-graveyard">
                   <h4>墓地</h4>
                   <div class="pile-zone drop-zone" data-zone="graveyard">0枚</div>
                 </div>
-                <div>
+                <div class="side-zone side-zone-field">
                   <h4>フィールド</h4>
                   <div class="pile-zone drop-zone" data-zone="field">空き</div>
                 </div>
-                <div>
+                <div class="side-zone side-zone-banished">
                   <h4>除外</h4>
                   <div class="pile-zone drop-zone" data-zone="banished">0枚</div>
                 </div>
               </div>
             </div>
-          </div>
-          <div class="practice-deck-sources">
-            <div class="deck-source" aria-labelledby="mainDeckTitle">
-              <div class="section-head compact">
-                <div>
-                  <p class="eyebrow">Deck</p>
-                  <h3 id="mainDeckTitle">メインデッキ</h3>
-                </div>
-                <span id="mainDeckCount" class="badge">0枚</span>
+            <div class="duel-lower-row">
+              <div class="hand-zone-panel">
+                <h4>手札</h4>
+                <div id="handCards" class="hand-grid empty drop-zone" data-zone="hand"></div>
               </div>
-              <details class="starter-settings">
-                <summary>初動カード設定</summary>
-                <div id="starterCards" class="card-grid compact-grid empty">保存済みメインカードがここに表示されます。</div>
-              </details>
-              <div id="mainDeckCards" class="card-grid compact-grid empty">保存済みメインカードがここに表示されます。</div>
+              <div class="deck-source extra-deck-source" aria-labelledby="extraBoardTitle">
+                <div class="section-head compact">
+                  <div>
+                    <p class="eyebrow">Extra</p>
+                    <h3 id="extraBoardTitle">EXデッキ</h3>
+                  </div>
+                  <span id="extraCount" class="badge">0枚</span>
+                </div>
+                <div id="extraBoardCards" class="card-grid compact-grid empty">保存済みEXカードがここに表示されます。</div>
+              </div>
             </div>
-            <div class="deck-source" aria-labelledby="extraBoardTitle">
-              <div class="section-head compact">
-                <div>
-                  <p class="eyebrow">Extra</p>
-                  <h3 id="extraBoardTitle">EXデッキ</h3>
+            <div class="practice-deck-sources">
+              <div class="deck-source main-deck-source" aria-labelledby="mainDeckTitle">
+                <div class="section-head compact">
+                  <div>
+                    <p class="eyebrow">Deck</p>
+                    <h3 id="mainDeckTitle">メインデッキ</h3>
+                  </div>
+                  <span id="mainDeckCount" class="badge">0枚</span>
                 </div>
-                <span id="extraCount" class="badge">0枚</span>
+                <details class="starter-settings">
+                  <summary>初動カード設定</summary>
+                  <div id="starterCards" class="card-grid compact-grid empty">保存済みメインカードがここに表示されます。</div>
+                </details>
+                <div id="mainDeckCards" class="card-grid compact-grid empty">保存済みメインカードがここに表示されます。</div>
               </div>
-              <div id="extraBoardCards" class="card-grid compact-grid empty">保存済みEXカードがここに表示されます。</div>
             </div>
           </div>
           <form id="logForm" class="log-form">
