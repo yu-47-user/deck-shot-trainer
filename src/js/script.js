@@ -106,13 +106,11 @@ const els = {
   previewButton: document.querySelector("#previewButton"),
   saveDeckButton: document.querySelector("#saveDeckButton"),
   clearDataButton: document.querySelector("#clearDataButton"),
-  mainCards: document.querySelector("#mainCards"),
-  extraCards: document.querySelector("#extraCards"),
+  starterCards: document.querySelector("#starterCards"),
   mainDeckCards: document.querySelector("#mainDeckCards"),
   handCards: document.querySelector("#handCards"),
   extraBoardCards: document.querySelector("#extraBoardCards"),
   selectedCardStatus: document.querySelector("#selectedCardStatus"),
-  mainCount: document.querySelector("#mainCount"),
   mainDeckCount: document.querySelector("#mainDeckCount"),
   extraCount: document.querySelector("#extraCount"),
   drawButton: document.querySelector("#drawButton"),
@@ -579,10 +577,7 @@ async function saveDeck() {
 }
 
 function renderAllCards() {
-  renderCards(els.mainCards, state.mainCards, "メイン", { canMarkStarter: true });
-  renderCards(els.extraCards, state.extraCards, "EX");
   renderPracticeDeckSources();
-  els.mainCount.textContent = `${state.mainCards.length}枚`;
 }
 
 function renderCards(container, cards, label, options = {}) {
@@ -710,6 +705,16 @@ function renderPracticeBoard() {
 function renderPracticeDeckSources() {
   renderMainDeckCards();
   renderExtraBoardCards();
+  renderStarterSettings();
+}
+
+function renderStarterSettings() {
+  if (!els.starterCards) {
+    return;
+  }
+
+  renderCards(els.starterCards, state.mainCards, "メイン", { canMarkStarter: true });
+  els.starterCards.classList.add("deck-return-zone");
 }
 
 function renderMainDeckCards() {
@@ -781,7 +786,7 @@ function getZoneBaseClass(zone) {
 
 function getEmptyZoneText(zone, label) {
   if (zone === "hand") {
-    return state.currentHand.length ? "移動したカードはここへ戻せます。" : "保存済みメインデッキからドローします。";
+    return "";
   }
   if (zone === "graveyard" || zone === "banished") {
     return "0枚";
@@ -1386,6 +1391,8 @@ async function init() {
   els.presetButton.addEventListener("click", applyOfficialPreset);
   els.mainDeckCards.addEventListener("dragover", handleMainDeckDragOver);
   els.mainDeckCards.addEventListener("drop", handleMainDeckDrop);
+  els.starterCards.addEventListener("dragover", handleMainDeckDragOver);
+  els.starterCards.addEventListener("drop", handleMainDeckDrop);
 }
 
 init();
